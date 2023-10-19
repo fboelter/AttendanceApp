@@ -1,4 +1,4 @@
-package com.cs407.attendanceapp2;
+package com.cs407.attendanceapp;
 
 import android.content.Context;
 

@@ -1,8 +1,10 @@
-package com.cs407.attendanceapp2;
+package com.cs407.attendanceapp;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+
+import com.cs407.attendanceapp2.R;
 
 public class MainActivity extends AppCompatActivity {
 

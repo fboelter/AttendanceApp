@@ -1,29 +1,25 @@
 package com.cs407.attendanceapp;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.cs407.attendanceapp2.R;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class MainActivity extends AppCompatActivity {
+public class LoginPage extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.page_login);
         FirebaseApp.initializeApp(this);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
@@ -76,7 +72,55 @@ public class MainActivity extends AppCompatActivity {
 //                        Log.e("Firestore", "Error updating document", e);
 //                    }
 //                });
+    }
+    public void loginClick(View view) {
+        EditText emailTextField = (EditText) findViewById(R.id.emailEditText);
+        String email = emailTextField.getText().toString();
+        EditText passwordTextField = (EditText) findViewById(R.id.passwordEditText);
+        String password = passwordTextField.getText().toString();
+        if(email == null || password == null) {
+            Log.e("Login Error", "Invalid username or password");
+        } else {
+            checkLogin(email, password);
+        }
+    }
+    public void checkLogin(String email, String password) {
 
+        FirebaseApp.initializeApp(this);
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+                .document(email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot document = task.getResult();
+                        if (document.exists()) {
+                            String passwordValue = document.getString("password");
+                            String userType = document.getString("user_type");
+                            if (passwordValue.equals(password)) {
+                                Log.i("Info", "Made it here");
+                                goToHomePage(userType);
+                            }
+                        } else {
+                            Log.d("Firestore Data", "No such document");
+                        }
+                    } else {
+                        Log.e("Firestore Error", "Error getting document", task.getException());
+                    }
+                });
+    }
 
+    public void goToHomePage(String userType) {
+        if (userType.equals("student")) {
+            Intent intent = new Intent(this, StudentHomePage.class);
+            startActivity(intent);
+        } else {
+            Intent intent = new Intent(this, ProfessorHomePage.class);
+            startActivity(intent);
+        }
+    }
+    public void signUpClick(View view) {
+        Intent intent = new Intent(this, SignUpPage.class);
+        startActivity(intent);
     }
 }

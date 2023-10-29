@@ -6,11 +6,14 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.cs407.attendanceapp2.R;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -18,6 +21,10 @@ import org.w3c.dom.Text;
 
 public class LoginPage extends AppCompatActivity {
 
+    private EditText emailEditText;
+    private EditText passwordEditText;
+    private TextView incorrectLoginText;
+    private Button loginButton;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -25,8 +32,10 @@ public class LoginPage extends AppCompatActivity {
         FirebaseApp.initializeApp(this);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        EditText emailEditText = findViewById(R.id.emailEditText);
-        EditText passwordEditText = findViewById(R.id.passwordEditText);
+        emailEditText = findViewById(R.id.emailEditText);
+        passwordEditText = findViewById(R.id.passwordEditText);
+        incorrectLoginText = findViewById(R.id.incorrectLoginText);
+        loginButton = findViewById(R.id.loginButton);
 
         emailEditText.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -92,43 +101,60 @@ public class LoginPage extends AppCompatActivity {
 //                });
     }
     public void loginClick(View view) {
-        EditText emailTextField = (EditText) findViewById(R.id.emailEditText);
-        String email = emailTextField.getText().toString();
-        EditText passwordTextField = (EditText) findViewById(R.id.passwordEditText);
-        String password = passwordTextField.getText().toString();
+        // Disable login button while login process is running
+        loginButton.setEnabled(false);
 
-        if(email == null || password == null) {
+        String email = emailEditText.getText().toString();
+        String password = passwordEditText.getText().toString();
+
+        if(email.isEmpty() || password.isEmpty()) {
             Log.e("Login Error", "Invalid username or password");
             displayIncorrectLoginMessage();
+            Toast.makeText(LoginPage.this, "Please enter both email and password.", Toast.LENGTH_SHORT).show();
         } else {
-            checkLogin(email, password);
+            validateLoginWithFirebaseAuth(email, password);
         }
     }
-    public void checkLogin(String email, String password) {
-        FirebaseApp.initializeApp(this);
+
+    public void validateLoginWithFirebaseAuth(String email, String password) {
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        if (mAuth.getCurrentUser() != null) {
+                            fetchUserTypeFromFirestore(mAuth.getCurrentUser().getUid());
+                        } else {
+                            Log.e("Login", "Current user is null after successful login");
+                            displayIncorrectLoginMessage();
+                        }
+                    } else {
+                        Log.e("Login", "Error signing in", task.getException());
+                        displayIncorrectLoginMessage();
+                    }
+                    // Enable Login button when process has completed
+                    loginButton.setEnabled(true);
+                });
+    }
+
+    public void fetchUserTypeFromFirestore(String uid) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        db.collection("users")
-                .document(email)
+        db.collection("users").document(uid)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         DocumentSnapshot document = task.getResult();
                         if (document.exists()) {
-                            String passwordValue = document.getString("password");
                             String userType = document.getString("user_type");
-                            if (passwordValue.equals(password)) {
-                                Log.i("Info", "Made it here");
-                                goToHomePage(userType);
-                            } else {
-                                Log.i("Info", "Invalid email or password");
-                                displayIncorrectLoginMessage();
-                            }
+                            goToHomePage(userType);
                         } else {
-                            Log.d("Firestore Data", "No such document");
-                            displayIncorrectLoginMessage(); // email wasn't found?
+                            Log.e("Firestore Data", "No such document");
+                            displayIncorrectLoginMessage();
+                            Toast.makeText(LoginPage.this, "No account associated with this email.", Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         Log.e("Firestore Error", "Error getting document", task.getException());
+                        displayIncorrectLoginMessage();
+                        Toast.makeText(LoginPage.this, "Error fetching user data", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -148,12 +174,10 @@ public class LoginPage extends AppCompatActivity {
     }
 
     public void displayIncorrectLoginMessage() {
-        TextView incorrectLoginText = findViewById(R.id.incorrectLoginText);
         incorrectLoginText.setText("Invalid email or password");
     }
 
     public void removeIncorrectLoginMessage() {
-        TextView incorrectLoginText = findViewById(R.id.incorrectLoginText);
         incorrectLoginText.setText("");
     }
 }

@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.cs407.attendanceapp2.R;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -16,6 +17,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,7 +55,7 @@ public class SignUpPage extends AppCompatActivity {
         if(email.isEmpty() || password.isEmpty() || firstName.isEmpty() || lastName.isEmpty()) {
             Log.e("Login Error", "Invalid credentials");
         } else {
-            writeUser(email, firstName, lastName, password, userType);
+            checkIfEmailExists(email, firstName, lastName, password, userType);
         }
     }
 
@@ -86,6 +88,26 @@ public class SignUpPage extends AppCompatActivity {
                     public void onFailure(@NonNull Exception e) {
                         // Handle errors here
                         Log.e("Firestore", "Error updating document", e);
+                    }
+                });
+    }
+
+    public void checkIfEmailExists(String email, String firstName, String lastName, String password, String userType) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+                .document(email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot document = task.getResult();
+                        if (document.exists()) {
+                            Log.e("Signup Error", "Email already taken");
+                            Toast.makeText(SignUpPage.this, "Email already associated with an account.", Toast.LENGTH_SHORT).show();
+                        } else {
+                            writeUser(email, firstName, lastName, password, userType);
+                        }
+                    } else {
+                        Log.e("Firestore Error", "Error checking for email", task.getException());
                     }
                 });
     }

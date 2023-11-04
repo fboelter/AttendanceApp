@@ -3,16 +3,46 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     tools:context="com.cs407.attendanceapp.StudentHomePage">
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="76dp"
-        android:layout_marginBottom="404dp"
-        android:text="Yay you made it to the student homepage"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:background="#C69090"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:popupTheme="@style/AppTheme.PopupOverlay">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/atapdance"
+            android:textColor="#040303"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            tools:layout_editor_absoluteX="150dp"
+            tools:layout_editor_absoluteY="19dp" />
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="start"
+            android:src="@drawable/tap_dance_icon"
+            tools:layout_editor_absoluteX="16dp" />
+
+        <ImageView
+            android:id="@+id/profile_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="end"
+            android:src="@drawable/profile_icon"
+            tools:layout_editor_absoluteX="363dp"
+            tools:layout_editor_absoluteY="8dp" />
+
+    </androidx.appcompat.widget.Toolbar>
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,16 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".StudentHomePage">
+
+<!--    <item-->
+<!--        android:id="@+id/action_profile"-->
+<!--        android:icon="@drawable/profile_icon"-->
+<!--        android:title="@string/app_name"-->
+<!--        app:showAsAction="ifRoom" />-->
+
+    <item
+        android:id="@+id/action_signout"
+        android:title="@string/sign_out"/>
+
+</menu>

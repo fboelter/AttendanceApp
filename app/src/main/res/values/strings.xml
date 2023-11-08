@@ -2,4 +2,6 @@
     <string name="app_name">AttendanceApp2</string>
     <string name="atapdance">ATapdance</string>
     <string name="sign_out">Sign Out</string>
+    <string name="courses_today">Courses Today</string>
+    <string name="all_courses">All Courses</string>
 </resources>

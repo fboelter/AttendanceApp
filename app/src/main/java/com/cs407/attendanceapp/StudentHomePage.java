@@ -87,8 +87,7 @@ public class StudentHomePage extends AppCompatActivity {
                             String startTime = formatTime(timeStart);
                             String endTime = formatTime(timeEnd);
                             String timeRange = startTime + " - " + endTime;
-                            CollectionReference studentsRef = classDocument.getReference().collection("Students");
-                            Query studentQuery = studentsRef.whereArrayContains("student_emails", userEmail);
+                            Query studentQuery = classesRef.whereArrayContains("student_emails", userEmail);
 
                             studentQuery.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                                 @Override

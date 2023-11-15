@@ -7,7 +7,7 @@
     tools:context="com.cs407.attendanceapp.StudentHomePage">
 
     <Button
-        android:id="@+id/plusButton2"
+        android:id="@+id/addCourseStudentButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"

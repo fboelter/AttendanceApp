@@ -15,6 +15,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -44,6 +45,7 @@ public class StudentHomePage extends AppCompatActivity {
     private List<Course> classListAll;
     private CourseAdapter adapter;
     private CourseAdapter adapter_all;
+    private Button addCourseStudentButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +53,7 @@ public class StudentHomePage extends AppCompatActivity {
         setContentView(R.layout.activity_student_home_page);
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
+        addCourseStudentButton = findViewById(R.id.addCourseStudentButton);
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -106,6 +109,18 @@ public class StudentHomePage extends AppCompatActivity {
                         // Handle errors
                         Log.e("FirestoreQuery", "Error getting documents: " + task.getException());
                     }
+                }
+            });
+
+            addCourseStudentButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Open QR code
+                    // scan QR code
+
+                    // if successful, add student to Firebase for that course
+                    // if failed, display error message and give them another chance to try it again
+                    // if it fails twice, should we let them try again?
                 }
             });
         }

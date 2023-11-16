@@ -9,6 +9,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import com.cs407.attendanceapp2.R;
 import com.google.firebase.auth.FirebaseAuth;
@@ -25,6 +26,14 @@ public class CourseDetails extends AppCompatActivity {
 
         String classId = getIntent().getStringExtra("classId");
         ImageView qrCodeImageView = findViewById(R.id.qrCodeImageView);
+
+        try {
+            BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
+            Bitmap bitmap = barcodeEncoder.encodeBitmap(classId, BarcodeFormat.QR_CODE, 400, 400);
+            qrCodeImageView.setImageBitmap(bitmap);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void showProfilePopupMenu(View view) {

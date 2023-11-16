@@ -49,7 +49,7 @@ public class ProfessorHomePage extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_student_home_page);
+        setContentView(R.layout.activity_professor_home_page);
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
 

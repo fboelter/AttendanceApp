@@ -12,6 +12,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 
 import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -266,10 +267,6 @@ public class ProfessorHomePage extends AppCompatActivity {
                 if (checkBoxThursday.isChecked()) selectedDays.add("Thursday");
                 if (checkBoxFriday.isChecked()) selectedDays.add("Friday");
 
-                // Get start + end date
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-                String startDate = format.format(startDateCalendar.getTime());
-                String endDate = format.format(endDateCalendar.getTime());
 
                 // Validate the data
                 if (courseName.isEmpty()) {
@@ -285,12 +282,16 @@ public class ProfessorHomePage extends AppCompatActivity {
                     return;
                 }
 
+                // Convert Calendar instances to Timestamp for Firestore
+                Timestamp timestampStart = new Timestamp(startDateCalendar.getTime());
+                Timestamp timestampEnd = new Timestamp(endDateCalendar.getTime());
+
                 // Put data into an object
                 Map<String, Object> classData = new HashMap<>();
                 classData.put("course_name", courseName);
                 classData.put("days_of_week", selectedDays);
-                classData.put("time_start", startDate);
-                classData.put("time_end", endDate);
+                classData.put("time_start", timestampStart);
+                classData.put("time_end", timestampEnd);
 
                 // Connect with firestore
                 FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -331,17 +332,26 @@ public class ProfessorHomePage extends AppCompatActivity {
         int day = calendar.get(Calendar.DAY_OF_MONTH);
 
         DatePickerDialog datePickerDialog = new DatePickerDialog(
-                this, // Context
-                new DatePickerDialog.OnDateSetListener() {
-                    @Override
-                    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                        // Set the calendar with the chosen date
-                        calendar.set(year, month, dayOfMonth);
-                        // Update the button text
-                        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-                        dateButton.setText(format.format(calendar.getTime()));
-                    }
-                }, year, month, day);
+                this,
+                (view, selectedYear, selectedMonth, selectedDayOfMonth) -> {
+                    TimePickerDialog timePickerDialog = new TimePickerDialog(
+                            this,
+                            (timeView, selectedHour, selectedMinute) -> {
+                                calendar.set(selectedYear, selectedMonth, selectedDayOfMonth, selectedHour, selectedMinute);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+
+                                SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+                                dateButton.setText(dateTimeFormat.format(calendar.getTime()));
+                            },
+                            calendar.get(Calendar.HOUR_OF_DAY),
+                            calendar.get(Calendar.MINUTE),
+                            false
+                    );
+                    timePickerDialog.show();
+                },
+                year, month, day
+        );
         datePickerDialog.show();
     }
 }

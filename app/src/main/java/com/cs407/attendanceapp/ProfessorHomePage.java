@@ -1,29 +1,42 @@
 package com.cs407.attendanceapp;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 
+import android.app.DatePickerDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
+import android.widget.Toast;
 
 import androidx.appcompat.widget.Toolbar;
 import com.cs407.attendanceapp2.R;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -33,8 +46,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class ProfessorHomePage extends AppCompatActivity {
 
@@ -49,9 +64,18 @@ public class ProfessorHomePage extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_student_home_page);
+        setContentView(R.layout.activity_professor_home_page);
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
+
+        Button addClass = findViewById(R.id.plusButton);
+        addClass.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddCourseDialog();
+            }
+        });
+
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -185,5 +209,139 @@ public class ProfessorHomePage extends AppCompatActivity {
         Date date = timestamp.toDate();
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mma", Locale.US);
         return sdf.format(date);
+    }
+
+    public void showAddCourseDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+
+        View dialogView = inflater.inflate(R.layout.dialogue_add_course, null);
+        builder.setView(dialogView);
+
+        // Find the buttons in the dialog layout
+        Button buttonStartDate = dialogView.findViewById(R.id.buttonStartDate);
+        Button buttonEndDate = dialogView.findViewById(R.id.buttonEndDate);
+
+        // Initialize the calendars
+        final Calendar startDateCalendar = Calendar.getInstance();
+        final Calendar endDateCalendar = Calendar.getInstance();
+
+        CheckBox checkBoxMonday = dialogView.findViewById(R.id.checkboxMonday);
+        CheckBox checkBoxTuesday = dialogView.findViewById(R.id.checkboxTuesday);
+        CheckBox checkBoxWednesday = dialogView.findViewById(R.id.checkboxWednesday);
+        CheckBox checkBoxThursday = dialogView.findViewById(R.id.checkboxThursday);
+        CheckBox checkBoxFriday = dialogView.findViewById(R.id.checkboxFriday);
+
+
+        // Set the onClickListeners for the date buttons
+        buttonStartDate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showDatePickerDialog(startDateCalendar, buttonStartDate);
+            }
+        });
+
+        buttonEndDate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showDatePickerDialog(endDateCalendar, buttonEndDate);
+            }
+        });
+
+        EditText courseNameEditText = dialogView.findViewById(R.id.editTextCourseName);
+        // Set up checkboxes or toggle buttons for days of the week
+        // Set up date pickers for start and end date
+
+        builder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int id) {
+                // Get course Name
+                String courseName = courseNameEditText.getText().toString();
+
+                // Get days met
+                ArrayList<String> selectedDays = new ArrayList<>();
+                if (checkBoxMonday.isChecked()) selectedDays.add("Monday");
+                if (checkBoxTuesday.isChecked()) selectedDays.add("Tuesday");
+                if (checkBoxWednesday.isChecked()) selectedDays.add("Wednesday");
+                if (checkBoxThursday.isChecked()) selectedDays.add("Thursday");
+                if (checkBoxFriday.isChecked()) selectedDays.add("Friday");
+
+                // Get start + end date
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                String startDate = format.format(startDateCalendar.getTime());
+                String endDate = format.format(endDateCalendar.getTime());
+
+                // Validate the data
+                if (courseName.isEmpty()) {
+                    Toast.makeText(ProfessorHomePage.this, "Please enter a course name.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (selectedDays.isEmpty()) {
+                    Toast.makeText(ProfessorHomePage.this, "Please select at least one day of the week.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (startDateCalendar.getTime().after(endDateCalendar.getTime())) {
+                    Toast.makeText(ProfessorHomePage.this, "The end date must be after the start date.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // Put data into an object
+                Map<String, Object> classData = new HashMap<>();
+                classData.put("course_name", courseName);
+                classData.put("days_of_week", selectedDays);
+                classData.put("time_start", startDate);
+                classData.put("time_end", endDate);
+
+                // Connect with firestore
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
+                CollectionReference classesRef = db.collection("Classes");
+
+                // Add the new class to Firestore, with a uniquely generated ID
+                classesRef.add(classData)
+                        .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                            @Override
+                            public void onSuccess(DocumentReference documentReference) {
+                                // Data push successful, you can get the unique ID like this:
+                                String uniqueClassId = documentReference.getId();
+                                Toast.makeText(ProfessorHomePage.this, "Class added successfully with ID: " + uniqueClassId, Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                // Data push failed
+                                Toast.makeText(ProfessorHomePage.this, "Failed to add class: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User cancelled the dialog
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void showDatePickerDialog(final Calendar calendar, final Button dateButton) {
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH);
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(
+                this, // Context
+                new DatePickerDialog.OnDateSetListener() {
+                    @Override
+                    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                        // Set the calendar with the chosen date
+                        calendar.set(year, month, dayOfMonth);
+                        // Update the button text
+                        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                        dateButton.setText(format.format(calendar.getTime()));
+                    }
+                }, year, month, day);
+        datePickerDialog.show();
     }
 }

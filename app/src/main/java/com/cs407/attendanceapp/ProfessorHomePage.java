@@ -233,6 +233,10 @@ public class ProfessorHomePage extends AppCompatActivity {
         CheckBox checkBoxThursday = dialogView.findViewById(R.id.checkboxThursday);
         CheckBox checkBoxFriday = dialogView.findViewById(R.id.checkboxFriday);
 
+        // Get email to set professor field
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        String userEmail = currentUser.getEmail();
+
 
         // Set the onClickListeners for the date buttons
         buttonStartDate.setOnClickListener(new View.OnClickListener() {
@@ -292,6 +296,7 @@ public class ProfessorHomePage extends AppCompatActivity {
                 classData.put("days_of_week", selectedDays);
                 classData.put("time_start", timestampStart);
                 classData.put("time_end", timestampEnd);
+                classData.put("professor", userEmail);
 
                 // Connect with firestore
                 FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -305,6 +310,14 @@ public class ProfessorHomePage extends AppCompatActivity {
                                 // Data push successful, you can get the unique ID like this:
                                 String uniqueClassId = documentReference.getId();
                                 Toast.makeText(ProfessorHomePage.this, "Class added successfully with ID: " + uniqueClassId, Toast.LENGTH_SHORT).show();
+
+                                // Create an intent to start the CourseDetailsActivity
+                                Intent intent = new Intent(ProfessorHomePage.this, CourseDetails.class);
+                                intent.putExtra("classId", documentReference.getId());
+                                startActivity(intent);
+
+                                // Optionally, if you want to finish the current activity so the user can't return to it by pressing the back button
+                                finish();
                             }
                         })
                         .addOnFailureListener(new OnFailureListener() {

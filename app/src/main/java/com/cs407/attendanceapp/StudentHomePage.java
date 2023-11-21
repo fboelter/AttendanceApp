@@ -112,6 +112,7 @@ public class StudentHomePage extends AppCompatActivity {
             addCourseStudentButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    Log.i("INFO", "Add course button clicked");
                     Intent intent = new Intent(StudentHomePage.this, ScanBarcodeActivity.class);
                     startActivity(intent);
 

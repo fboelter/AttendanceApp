@@ -87,32 +87,19 @@ public class StudentHomePage extends AppCompatActivity {
                             String startTime = formatTime(timeStart);
                             String endTime = formatTime(timeEnd);
                             String timeRange = startTime + " - " + endTime;
-                            Query studentQuery = classesRef.whereArrayContains("student_emails", userEmail);
+                            // Check if the user is enrolled in this class
+                            List<String> studentEmails = (List<String>) classDocument.get("student_emails");
+                            if (studentEmails != null && studentEmails.contains(userEmail)) {
+                                classListAll.add(new Course(className, timeRange));
+                                adapter_all.notifyDataSetChanged();
+                            }
 
-                            studentQuery.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                @Override
-                                public void onComplete(@NonNull Task<QuerySnapshot> studentTask) {
-                                    if (studentTask.isSuccessful() && !studentTask.getResult().isEmpty()) {
-                                        // The user's email is in the student_emails array for this class
-                                        classListAll.add(new Course(className, timeRange));
-                                        adapter_all.notifyDataSetChanged();
-
-                                    }
-                                }
-                            });
-
+                            // Check if the class is scheduled for the current day
                             if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
-                                // Check if today is within the schedule and user's email is in the student_emails
-                            studentQuery.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                @Override
-                                public void onComplete(@NonNull Task<QuerySnapshot> studentTask) {
-                                    if (studentTask.isSuccessful() && !studentTask.getResult().isEmpty()) {
-                                        // The user's email is in the student_emails array for this class
-                                        classList.add(new Course(className, timeRange));
-                                        adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
-                                    }
+                                if (studentEmails != null && studentEmails.contains(userEmail)) {
+                                    classList.add(new Course(className, timeRange));
+                                    adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
                                 }
-                            });
                             }
                         }
                     } else {
@@ -149,6 +136,8 @@ public class StudentHomePage extends AppCompatActivity {
                 if (item.getItemId() == R.id.action_signout) {
                     // Handle the "Sign Out" action here using Firebase Authentication
                     FirebaseAuth.getInstance().signOut();
+                    Intent intent = new Intent(StudentHomePage.this, LoginPage.class);
+                    startActivity(intent);
                     // You can also navigate the user back to the login screen or perform other actions as needed.
                     finish();
                     return true;

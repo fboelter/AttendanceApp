@@ -174,6 +174,8 @@ public class ProfessorHomePage extends AppCompatActivity {
                 if (item.getItemId() == R.id.action_signout) {
                     // Handle the "Sign Out" action here using Firebase Authentication
                     FirebaseAuth.getInstance().signOut();
+                    Intent intent = new Intent(ProfessorHomePage.this, LoginPage.class);
+                    startActivity(intent);
                     // You can also navigate the user back to the login screen or perform other actions as needed.
                     finish();
                     return true;

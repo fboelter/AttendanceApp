@@ -19,9 +19,6 @@
         <activity
             android:name="com.cs407.attendanceapp.CourseDetails"/>
         <activity
-            android:name="com.cs407.attendanceapp.ScanBarcodeActivity"
-            android:exported="false" />
-        <activity
             android:name="com.cs407.attendanceapp.gradebookPage"
             android:exported="false" />
         <activity

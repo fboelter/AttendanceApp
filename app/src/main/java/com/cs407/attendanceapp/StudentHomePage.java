@@ -38,7 +38,6 @@ import java.util.Locale;
 public class StudentHomePage extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
-
     private ListView listView;
     private ListView listViewAll;
     private List<Course> classList;
@@ -80,6 +79,7 @@ public class StudentHomePage extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         for (QueryDocumentSnapshot classDocument : task.getResult()) {
                             // Access the class data
+                            String classDocumentId = classDocument.getId();
                             String className = classDocument.getString("course_name");
                             List<String> daysOfWeek = (List<String>) classDocument.get("days_of_week");
                             Timestamp timeStart = classDocument.getTimestamp("time_start");
@@ -90,14 +90,14 @@ public class StudentHomePage extends AppCompatActivity {
                             // Check if the user is enrolled in this class
                             List<String> studentEmails = (List<String>) classDocument.get("student_emails");
                             if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                classListAll.add(new Course(className, timeRange));
+                                classListAll.add(new Course(className, timeRange, classDocumentId));
                                 adapter_all.notifyDataSetChanged();
                             }
 
                             // Check if the class is scheduled for the current day
                             if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
                                 if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                    classList.add(new Course(className, timeRange));
+                                    classList.add(new Course(className, timeRange, classDocumentId));
                                     adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
                                 }
                             }
@@ -122,8 +122,6 @@ public class StudentHomePage extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-
-
     }
 
     private void showProfilePopupMenu(View view) {
@@ -145,7 +143,6 @@ public class StudentHomePage extends AppCompatActivity {
                 return false;
             }
         });
-
         popupMenu.show();
     }
 
@@ -161,7 +158,6 @@ public class StudentHomePage extends AppCompatActivity {
 
             return currentDate.after(startTime) && currentDate.before(endTime);
         }
-
         return false;
     }
 
@@ -176,24 +172,3 @@ public class StudentHomePage extends AppCompatActivity {
         return sdf.format(date);
     }
 }
-
-//    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        getMenuInflater().inflate(R.menu.menu_main, menu);
-//        return true;
-//    }
-//
-//    @Override
-//    public boolean onOptionsItemSelected(MenuItem item) {
-//        if (item.getItemId() == R.id.action_profile) {
-//            // Handle the profile icon click event
-//            openUserProfile();
-//            return true;
-//        } else if (item.getItemId() == R.id.action_signout) {
-//            // Handle the "Sign Out" action here using Firebase Authentication
-//            FirebaseAuth.getInstance().signOut();
-//            // You can also navigate the user back to the login screen or perform other actions as needed.
-//            return true;
-//        }
-//        return super.onOptionsItemSelected(item);
-//    }

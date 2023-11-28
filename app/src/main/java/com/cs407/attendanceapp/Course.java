@@ -2,11 +2,13 @@ package com.cs407.attendanceapp;
 
 public class Course {
     private String courseName;
-    private String timeRange; // Time range (e.g., "1:00pm - 2:15pm")
+    private String timeRange;
+    private String classDocumentId;
 
-    public Course(String courseName, String timeRange) {
+    public Course(String courseName, String timeRange, String classDocumentId) {
         this.courseName = courseName;
         this.timeRange = timeRange;
+        this.classDocumentId = classDocumentId;
     }
 
     public String getCourseName() {
@@ -16,4 +18,6 @@ public class Course {
     public String getTimeRange() {
         return timeRange;
     }
+
+    public String getId() { return classDocumentId; }
 }

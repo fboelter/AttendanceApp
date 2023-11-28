@@ -6,11 +6,16 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.text.InputType;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -42,6 +47,8 @@ import com.cs407.attendanceapp2.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.zxing.BarcodeFormat;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -88,7 +95,6 @@ public class CourseDetails extends AppCompatActivity {
             }
         });
 
-
         try {
             BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
             Bitmap bitmap = barcodeEncoder.encodeBitmap(classId, BarcodeFormat.QR_CODE, 400, 400);
@@ -114,6 +120,14 @@ public class CourseDetails extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 showDeleteCourseDialog(courseName, classId);
+            }
+        });
+
+        Button saveQrCodeButton = findViewById(R.id.shareQrButton);
+        saveQrCodeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveQrCodeToGallery();
             }
         });
     }
@@ -394,5 +408,34 @@ public class CourseDetails extends AppCompatActivity {
                         Toast.makeText(CourseDetails.this, "Failed to delete course: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    private void saveQrCodeToGallery() {
+        ImageView qrCodeImageView = findViewById(R.id.qrCodeImageView);
+        Bitmap qrCodeBitmap = ((BitmapDrawable) qrCodeImageView.getDrawable()).getBitmap();
+
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Images.Media.DISPLAY_NAME, "QRCode_" + System.currentTimeMillis() + ".jpg");
+        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+        values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES);
+
+        Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+        if (uri != null) {
+            try (OutputStream outputStream = getContentResolver().openOutputStream(uri)) {
+                boolean saved = qrCodeBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+                if (!saved) {
+                    throw new IOException("Failed to save bitmap.");
+                }
+                Toast.makeText(this, "QR Code saved to Photos!", Toast.LENGTH_SHORT).show();
+            } catch (IOException e) {
+                if (uri != null) {
+                    getContentResolver().delete(uri, null, null);
+                }
+                e.printStackTrace();
+                Toast.makeText(this, "Error saving QR Code", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Error saving QR Code", Toast.LENGTH_SHORT).show();
+        }
     }
 }

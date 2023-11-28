@@ -356,8 +356,10 @@ public class ProfessorHomePage extends AppCompatActivity {
                                 calendar.set(Calendar.SECOND, 0);
                                 calendar.set(Calendar.MILLISECOND, 0);
 
-                                SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
-                                dateButton.setText(dateTimeFormat.format(calendar.getTime()));
+                                // Use the updated pattern and add ordinal indicator
+                                SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault());
+                                String dateString = dateFormat.format(calendar.getTime());
+                                dateButton.setText(getDateWithOrdinal(dateString));
                             },
                             calendar.get(Calendar.HOUR_OF_DAY),
                             calendar.get(Calendar.MINUTE),
@@ -368,5 +370,23 @@ public class ProfessorHomePage extends AppCompatActivity {
                 year, month, day
         );
         datePickerDialog.show();
+    }
+
+    private String getDateWithOrdinal(String dateString) {
+        String[] splitDate = dateString.split(" ");
+        int day = Integer.parseInt(splitDate[1].replaceAll(",", ""));
+        return splitDate[0] + " " + day + getDayOfMonthSuffix(day) + ", " + splitDate[2] + " at " + splitDate[3] + " " + splitDate[4];
+    }
+
+    private String getDayOfMonthSuffix(final int n) {
+        if (n >= 11 && n <= 13) {
+            return "th";
+        }
+        switch (n % 10) {
+            case 1:  return "st";
+            case 2:  return "nd";
+            case 3:  return "rd";
+            default: return "th";
+        }
     }
 }

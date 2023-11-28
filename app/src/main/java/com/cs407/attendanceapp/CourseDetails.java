@@ -3,13 +3,19 @@ package com.cs407.attendanceapp;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.StyleSpan;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -19,9 +25,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import com.cs407.attendanceapp2.R;
@@ -54,6 +58,13 @@ public class CourseDetails extends AppCompatActivity {
         textViewClassStart = findViewById(R.id.classStartText);
         textViewClassEnd = findViewById(R.id.classEndText);
         ImageView qrCodeImageView = findViewById(R.id.qrCodeImageView);
+        ImageButton backButton = findViewById(R.id.backButton);
+        backButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(CourseDetails.this, ProfessorHomePage.class);
+                startActivity(intent);            }
+        });
 
 
         try {
@@ -100,14 +111,24 @@ public class CourseDetails extends AppCompatActivity {
                     textViewCourseName.setText(documentSnapshot.getString("course_name"));
 
                     List<String> days = (List<String>) documentSnapshot.get("days_of_week");
-                    textViewClassDays.setText("Meets On: " + TextUtils.join(", ", days));
+                    String daysJoined = TextUtils.join(", ", days);
+                    SpannableString daysSpannable = new SpannableString("Meets On: " + daysJoined);
+                    daysSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Meets On:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    textViewClassDays.setText(daysSpannable);
 
                     Date startDate = documentSnapshot.getDate("time_start");
                     Date endDate = documentSnapshot.getDate("time_end");
                     SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
 
-                    textViewClassStart.setText("Class Start Date: " + (startDate != null ? dateFormat.format(startDate) : "N/A"));
-                    textViewClassEnd.setText("Class End Date: " + (endDate != null ? dateFormat.format(endDate) : "N/A"));
+                    String startText = "Class Start Date: " + (startDate != null ? dateFormat.format(startDate) : "N/A");
+                    SpannableString startSpannable = new SpannableString(startText);
+                    startSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Class Start Date:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    textViewClassStart.setText(startSpannable);
+
+                    String endText = "Class End Date: " + (endDate != null ? dateFormat.format(endDate) : "N/A");
+                    SpannableString endSpannable = new SpannableString(endText);
+                    endSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Class End Date:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    textViewClassEnd.setText(endSpannable);
                 } else {
                     // Document does not exist
                 }

@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -62,6 +63,7 @@ public class CourseDetails extends AppCompatActivity {
     Date endDate;
     Date startDate;
     String classId;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,6 +106,14 @@ public class CourseDetails extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 showEditCourseDialog(courseName, days, startDate, endDate);
+            }
+        });
+
+        Button buttonDeleteCourse = findViewById(R.id.deleteCourseButton);
+        buttonDeleteCourse.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showDeleteCourseDialog(courseName, classId);
             }
         });
     }
@@ -166,7 +176,7 @@ public class CourseDetails extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Exception e) {
                 Toast.makeText(CourseDetails.this, "Error fetching class details", Toast.LENGTH_LONG).show();
-                Log.e("FireStoreQuery Error: ",e.getMessage());
+                Log.e("FireStoreQuery Error: ", e.getMessage());
             }
         });
     }
@@ -319,4 +329,50 @@ public class CourseDetails extends AppCompatActivity {
         datePickerDialog.show();
     }
 
+    private void showDeleteCourseDialog(final String courseName, final String classId) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(CourseDetails.this);
+        builder.setTitle("Delete Course");
+        builder.setMessage("Are you sure you want to delete this course? This action is irreversible. Type in the course name to confirm deletion.");
+
+        final EditText input = new EditText(CourseDetails.this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String confirmation = input.getText().toString();
+                if (confirmation.equals(courseName)) {
+                    deleteCourse(classId);
+                } else {
+                    Toast.makeText(CourseDetails.this, "Course name does not match. Deletion cancelled.", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void deleteCourse(String classId) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        DocumentReference classRef = db.collection("Classes").document(classId);
+
+        classRef.delete()
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Toast.makeText(CourseDetails.this, "Course deleted successfully", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(CourseDetails.this, ProfessorHomePage.class);
+                        startActivity(intent);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Toast.makeText(CourseDetails.this, "Failed to delete course: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
 }

@@ -88,11 +88,23 @@ public class StudentHomePage extends AppCompatActivity {
                             String endTime = formatTime(timeEnd);
                             String timeRange = startTime + " - " + endTime;
                             // Check if the user is enrolled in this class
-                            List<String> studentEmails = (List<String>) classDocument.get("student_emails");
-                            if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                classListAll.add(new Course(className, timeRange, classDocumentId));
-                                adapter_all.notifyDataSetChanged();
-                            }
+                            List<String> studentEmails = new ArrayList<>();
+                            classDocument.getReference().collection("Students").get()
+                                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                        @Override
+                                        public void onComplete(@NonNull Task<QuerySnapshot> studentTask) {
+                                            if (studentTask.isSuccessful()) {
+                                                for (QueryDocumentSnapshot studentDocument : studentTask.getResult()) {
+                                                    studentEmails.add(studentDocument.getId());
+                                                }
+
+                                                if (studentEmails != null && studentEmails.contains(userEmail)) {
+                                                    classListAll.add(new Course(className, timeRange, classDocumentId));
+                                                    adapter_all.notifyDataSetChanged();
+                                                }
+                                            }
+                                        }
+                                    });
 
                             // Check if the class is scheduled for the current day
                             if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {

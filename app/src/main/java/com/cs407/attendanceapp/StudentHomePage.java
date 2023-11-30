@@ -157,6 +157,7 @@ public class StudentHomePage extends AppCompatActivity {
 
                 // Create an intent to open the CourseDetailsActivity
                 Intent intent = new Intent(StudentHomePage.this, gradebookPage.class);
+                intent.putExtra("classDocumentId", selectedCourse.getId());
 
                 // Start the new activity
                 startActivity(intent);

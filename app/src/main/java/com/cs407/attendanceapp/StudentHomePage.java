@@ -1,32 +1,40 @@
 package com.cs407.attendanceapp;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.Timestamp;
-import com.google.firebase.auth.FirebaseAuth;
-
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.cs407.attendanceapp2.R;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -44,6 +52,9 @@ public class StudentHomePage extends AppCompatActivity {
     private List<Course> classListAll;
     private CourseAdapter adapter;
     private CourseAdapter adapter_all;
+    private Button addCourseStudentButton;
+    private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA};
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +62,7 @@ public class StudentHomePage extends AppCompatActivity {
         setContentView(R.layout.activity_student_home_page);
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
+        addCourseStudentButton = findViewById(R.id.addCourseStudentButton);
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -67,7 +79,7 @@ public class StudentHomePage extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
 
         if (currentUser != null) {
-            String userEmail = currentUser.getEmail(); // The user's email
+            String userEmail = currentUser.getEmail().toLowerCase(); // The user's email
             Date currentDate = Calendar.getInstance().getTime();
             // Initialize Firestore
             FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -87,9 +99,25 @@ public class StudentHomePage extends AppCompatActivity {
                             String startTime = formatTime(timeStart);
                             String endTime = formatTime(timeEnd);
                             String timeRange = startTime + " - " + endTime;
+
+                            List<String> studentEmails = null;
+                            Object studentEmailsObject = classDocument.get("student_emails");
+                            if (classDocument.exists() && className != null && studentEmailsObject != null)
+                            {
+                                try {
+                                    Log.i("INFO", "Attempting to cast " + className + " studentEmailsObject to List<String>");
+                                    studentEmails = (List<String>) studentEmailsObject;
+                                    Log.i("INFO", "Cast of " + className + "studentEmailsObject to List<String>: " + studentEmails);
+                                } catch (Exception e){
+                                    Log.e("ERROR", "Error with studentEmails: " + e.getMessage());
+                                    studentEmails = new ArrayList<String>();
+                                    studentEmails.add(userEmail);
+                                }
+                            }
+
                             // Check if the user is enrolled in this class
-                            List<String> studentEmails = (List<String>) classDocument.get("student_emails");
                             if (studentEmails != null && studentEmails.contains(userEmail)) {
+                                Log.i("INFO", "Should add className " + className + " to screen");
                                 classListAll.add(new Course(className, timeRange, classDocumentId));
                                 adapter_all.notifyDataSetChanged();
                             }
@@ -108,6 +136,17 @@ public class StudentHomePage extends AppCompatActivity {
                     }
                 }
             });
+
+            addCourseStudentButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Log.i("INFO", "Add course button clicked");
+                    // Intent intent = new Intent(StudentHomePage.this, ScanBarcodeActivity.class);
+                    // startActivity(intent);
+                    requestCameraPermission();
+
+                }
+            });
         }
         listViewAll.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -117,6 +156,7 @@ public class StudentHomePage extends AppCompatActivity {
 
                 // Create an intent to open the CourseDetailsActivity
                 Intent intent = new Intent(StudentHomePage.this, gradebookPage.class);
+                intent.putExtra("classDocumentId", selectedCourse.getId());
 
                 // Start the new activity
                 startActivity(intent);
@@ -170,5 +210,75 @@ public class StudentHomePage extends AppCompatActivity {
         Date date = timestamp.toDate();
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mma", Locale.US);
         return sdf.format(date);
+    }
+
+    private void requestCameraPermission() {
+        Log.i("INFO", "Requesting camera permission");
+        // Check if the CAMERA permission has been granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            Log.i("INFO", "Permission granted. Starting camera");
+            // Camera permission is already granted, proceed with camera-related operations
+            scanBarcode();
+        } else {
+            // Request CAMERA permission. The result will be received in the onRequestPermissionsResult callback.
+            Log.i("INFO", "Requesting permission");
+            ActivityCompat.requestPermissions(
+                    this,
+                    REQUIRED_PERMISSIONS,
+                    CAMERA_PERMISSION_REQUEST_CODE
+            );
+        }
+    }
+
+    @SuppressLint("MissingSuperCall")
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Camera permission granted, proceed with camera-related operations
+                Log.i("INFO", "Permission request granted after request, starting camera");
+                scanBarcode();
+            } else {
+                // Camera permission denied. You may want to show a message or take alternative actions.
+                Toast.makeText(this,
+                        "Permission request denied",
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void scanBarcode() {
+        GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(
+                        Barcode.FORMAT_QR_CODE,
+                        Barcode.FORMAT_AZTEC)
+                .build();
+        GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(this, options);
+        scanner
+                .startScan()
+                .addOnSuccessListener(
+                        barcode -> {
+                            // Task completed successfully
+                            String rawValue = barcode.getRawValue();
+                            String classId = rawValue.toString();
+                            Log.i("INFO", "Class Id is: " + classId);
+                            FirebaseFirestore db = FirebaseFirestore.getInstance();
+                            CollectionReference classesRef = db.collection("Classes");
+                            FirebaseUser currentUser = mAuth.getCurrentUser();
+                            // classesRef.document(classId).update("student_emails", FieldValue.arrayUnion(currentUser.getEmail()));
+                            Log.i("INFO", "Update call made to Firebase with " + currentUser.getEmail());
+                        })
+                .addOnCanceledListener(
+                        () -> {
+                            Log.i("INFO", "Barcode task cancelled");
+                            // Task canceled
+                        })
+                .addOnFailureListener(
+                        e -> {
+                            Log.e("ERROR", "Barcode task failed: " + e.getMessage());
+                            // Task failed with an exception
+                        });
+
     }
 }

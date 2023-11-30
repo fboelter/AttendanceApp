@@ -79,7 +79,7 @@ public class StudentHomePage extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
 
         if (currentUser != null) {
-            String userEmail = currentUser.getEmail(); // The user's email
+            String userEmail = currentUser.getEmail().toLowerCase(); // The user's email
             Date currentDate = Calendar.getInstance().getTime();
             // Initialize Firestore
             FirebaseFirestore db = FirebaseFirestore.getInstance();

@@ -60,12 +60,22 @@ public class StudentHomePage extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_student_home_page);
+
+        initializeUIComponents();
+        initializeListView();
+        setupAddCourseButtonListener();
+        setupListViewItemClickListener();
+        fetchAndDisplayCourses();
+    }
+
+    private void initializeUIComponents() {
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
         addCourseStudentButton = findViewById(R.id.addCourseStudentButton);
-
         mAuth = FirebaseAuth.getInstance();
+    }
 
+    private void initializeListView() {
         listView = findViewById(R.id.class_list);
         listViewAll = findViewById(R.id.class_list_all);
         classList = new ArrayList<>();
@@ -74,14 +84,29 @@ public class StudentHomePage extends AppCompatActivity {
         adapter_all = new CourseAdapter(this, classListAll);
         listView.setAdapter(adapter);
         listViewAll.setAdapter(adapter_all);
+    }
 
-        // Get the currently authenticated user
+    private void setupAddCourseButtonListener() {
+        addCourseStudentButton.setOnClickListener(v -> {
+            Log.i("INFO", "Add course button clicked");
+            requestCameraPermission();
+        });
+    }
+
+    private void setupListViewItemClickListener() {
+        listViewAll.setOnItemClickListener((parent, view, position, id) -> {
+            Course selectedCourse = classListAll.get(position);
+            Intent intent = new Intent(StudentHomePage.this, gradebookPage.class);
+            intent.putExtra("classDocumentId", selectedCourse.getId());
+            startActivity(intent);
+        });
+    }
+
+    private void fetchAndDisplayCourses() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-
         if (currentUser != null) {
-            String userEmail = currentUser.getEmail().toLowerCase(); // The user's email
+            String userEmail = currentUser.getEmail().toLowerCase();
             Date currentDate = Calendar.getInstance().getTime();
-            // Initialize Firestore
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             CollectionReference classesRef = db.collection("Classes");
 
@@ -136,33 +161,9 @@ public class StudentHomePage extends AppCompatActivity {
                     }
                 }
             });
-
-            addCourseStudentButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Log.i("INFO", "Add course button clicked");
-                    // Intent intent = new Intent(StudentHomePage.this, ScanBarcodeActivity.class);
-                    // startActivity(intent);
-                    requestCameraPermission();
-
-                }
-            });
         }
-        listViewAll.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Get the selected course from the list
-                Course selectedCourse = classListAll.get(position);
-
-                // Create an intent to open the CourseDetailsActivity
-                Intent intent = new Intent(StudentHomePage.this, gradebookPage.class);
-                intent.putExtra("classDocumentId", selectedCourse.getId());
-
-                // Start the new activity
-                startActivity(intent);
-            }
-        });
     }
+
 
     private void showProfilePopupMenu(View view) {
         PopupMenu popupMenu = new PopupMenu(this, view);

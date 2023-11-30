@@ -100,9 +100,25 @@ public class StudentHomePage extends AppCompatActivity {
                             String startTime = formatTime(timeStart);
                             String endTime = formatTime(timeEnd);
                             String timeRange = startTime + " - " + endTime;
+
+                            List<String> studentEmails = null;
+                            Object studentEmailsObject = classDocument.get("student_emails");
+                            if (classDocument.exists() && className != null && studentEmailsObject != null)
+                            {
+                                try {
+                                    Log.i("INFO", "Attempting to cast " + className + " studentEmailsObject to List<String>");
+                                    studentEmails = (List<String>) studentEmailsObject;
+                                    Log.i("INFO", "Cast of " + className + "studentEmailsObject to List<String>: " + studentEmails);
+                                } catch (Exception e){
+                                    Log.e("ERROR", "Error with studentEmails: " + e.getMessage());
+                                    studentEmails = new ArrayList<String>();
+                                    studentEmails.add(userEmail);
+                                }
+                            }
+
                             // Check if the user is enrolled in this class
-                            List<String> studentEmails = (List<String>) classDocument.get("student_emails");
                             if (studentEmails != null && studentEmails.contains(userEmail)) {
+                                Log.i("INFO", "Should add className " + className + " to screen");
                                 classListAll.add(new Course(className, timeRange, classDocumentId));
                                 adapter_all.notifyDataSetChanged();
                             }

@@ -66,22 +66,22 @@ public class ProfessorHomePage extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_professor_home_page);
+
+        initializeUIComponents();
+        initializeListView();
+        setupListViewItemClickListener();
+        fetchAndDisplayCourses();
+    }
+
+    private void initializeUIComponents() {
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
-
-        Button addClass = findViewById(R.id.plusButton);
-        addClass.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showAddCourseDialog();
-            }
-        });
-
-
+        Button addClassButton = findViewById(R.id.plusButton);
+        addClassButton.setOnClickListener(v -> showAddCourseDialog());
         mAuth = FirebaseAuth.getInstance();
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+    }
 
+    private void initializeListView() {
         listView = findViewById(R.id.class_list);
         listViewAll = findViewById(R.id.class_list_all);
         classList = new ArrayList<>();
@@ -90,13 +90,25 @@ public class ProfessorHomePage extends AppCompatActivity {
         adapter_all = new CourseAdapter(this, classListAll);
         listView.setAdapter(adapter);
         listViewAll.setAdapter(adapter_all);
+    }
 
+    private void setupListViewItemClickListener() {
+        listViewAll.setOnItemClickListener((parent, view, position, id) -> {
+            Course selectedCourse = classListAll.get(position);
+            Intent intent = new Intent(ProfessorHomePage.this, gradebookPage.class);
+            intent.putExtra("classDocumentId", selectedCourse.getId());
+            startActivity(intent);
+        });
+    }
+
+    private void fetchAndDisplayCourses() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             String userEmail = currentUser.getEmail();
             Date currentDate = Calendar.getInstance().getTime();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
             CollectionReference classesRef = db.collection("Classes");
 
-            // Query for classes where the professor's email matches the current user
             classesRef.whereEqualTo("professor", userEmail)
                     .get()
                     .addOnCompleteListener(task -> {
@@ -124,22 +136,6 @@ public class ProfessorHomePage extends AppCompatActivity {
                         }
                     });
         }
-        listViewAll.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Get the selected course from the list
-                Course selectedCourse = classListAll.get(position);
-
-                // Create an intent to open the gradebookPage
-                Intent intent = new Intent(ProfessorHomePage.this, gradebookPage.class);
-
-                // Pass the class document ID to the gradebookPage activity
-                intent.putExtra("classDocumentId", selectedCourse.getId());
-
-                // Start the new activity
-                startActivity(intent);
-            }
-        });
     }
 
     private void showProfilePopupMenu(View view) {

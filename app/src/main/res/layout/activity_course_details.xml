@@ -57,8 +57,8 @@
 
     <TextView
         android:id="@+id/textView21"
-        android:layout_width="248dp"
-        android:layout_height="52dp"
+        android:layout_width="224dp"
+        android:layout_height="50dp"
         android:layout_marginStart="88dp"
         android:layout_marginTop="20dp"
         android:text="Course Name"
@@ -114,8 +114,8 @@
         android:id="@+id/editCourseButton"
         android:layout_width="133dp"
         android:layout_height="48dp"
-        android:layout_marginStart="44dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginBottom="116dp"
         android:text="Edit Details"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -124,8 +124,8 @@
         android:id="@+id/deleteCourseButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="52dp"
-        android:layout_marginBottom="48dp"
+        android:layout_marginEnd="56dp"
+        android:layout_marginBottom="116dp"
         android:text="Delete Course"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -141,6 +141,19 @@
         android:src="@drawable/baseline_arrow_back_ios_new_24"
         app:layout_constraintEnd_toStartOf="@+id/textView21"
         app:layout_constraintTop_toBottomOf="@+id/toolbar" />
+
+    <Button
+        android:id="@+id/seeGradeBookButton"
+        android:layout_width="205dp"
+        android:layout_height="62dp"
+        android:layout_marginBottom="24dp"
+        android:background="#CA1414"
+        android:backgroundTint="#BC2B2B"
+        android:drawableTint="#A61313"
+        android:text="See Gradebook"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

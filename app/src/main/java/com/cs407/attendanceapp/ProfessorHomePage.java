@@ -79,6 +79,8 @@ public class ProfessorHomePage extends AppCompatActivity {
 
 
         mAuth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         listView = findViewById(R.id.class_list);
         listViewAll = findViewById(R.id.class_list_all);
@@ -89,63 +91,38 @@ public class ProfessorHomePage extends AppCompatActivity {
         listView.setAdapter(adapter);
         listViewAll.setAdapter(adapter_all);
 
-        // Get the currently authenticated user
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-
         if (currentUser != null) {
-            String userEmail = currentUser.getEmail(); // The user's email
+            String userEmail = currentUser.getEmail();
             Date currentDate = Calendar.getInstance().getTime();
-            // Initialize Firestore
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
             CollectionReference classesRef = db.collection("Classes");
 
-            classesRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                @Override
-                public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                    if (task.isSuccessful()) {
-                        for (QueryDocumentSnapshot classDocument : task.getResult()) {
-                            // Access the class data
-                            String className = classDocument.getString("course_name");
-                            List<String> daysOfWeek = (List<String>) classDocument.get("days_of_week");
-                            Timestamp timeStart = classDocument.getTimestamp("time_start");
-                            Timestamp timeEnd = classDocument.getTimestamp("time_end");
-                            String startTime = formatTime(timeStart);
-                            String endTime = formatTime(timeEnd);
-                            String timeRange = startTime + " - " + endTime;
-                            Query studentQuery = classesRef.whereArrayContains("student_emails", userEmail);
+            // Query for classes where the professor's email matches the current user
+            classesRef.whereEqualTo("professor", userEmail)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot classDocument : task.getResult()) {
+                                String classDocumentId = classDocument.getId();
+                                String className = classDocument.getString("course_name");
+                                Timestamp timeStart = classDocument.getTimestamp("time_start");
+                                Timestamp timeEnd = classDocument.getTimestamp("time_end");
+                                String startTime = formatTime(timeStart);
+                                String endTime = formatTime(timeEnd);
+                                String timeRange = startTime + " - " + endTime;
+                                List<String> daysOfWeek = (List<String>) classDocument.get("days_of_week");
 
-                            studentQuery.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                @Override
-                                public void onComplete(@NonNull Task<QuerySnapshot> studentTask) {
-                                    if (studentTask.isSuccessful() && !studentTask.getResult().isEmpty()) {
-                                        // The user's email is in the student_emails array for this class
-                                        classListAll.add(new Course(className, timeRange));
-                                        adapter_all.notifyDataSetChanged();
-
-                                    }
+                                Course course = new Course(className, timeRange, classDocumentId);
+                                classListAll.add(course);
+                                if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
+                                    classList.add(course);
                                 }
-                            });
-
-                            if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
-                                // Check if today is within the schedule and user's email is in the student_emails
-                                studentQuery.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                    @Override
-                                    public void onComplete(@NonNull Task<QuerySnapshot> studentTask) {
-                                        if (studentTask.isSuccessful() && !studentTask.getResult().isEmpty()) {
-                                            // The user's email is in the student_emails array for this class
-                                            classList.add(new Course(className, timeRange));
-                                            adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
-                                        }
-                                    }
-                                });
                             }
+                            adapter.notifyDataSetChanged();
+                            adapter_all.notifyDataSetChanged();
+                        } else {
+                            Log.e("FirestoreQuery", "Error getting documents: " + task.getException());
                         }
-                    } else {
-                        // Handle errors
-                        Log.e("FirestoreQuery", "Error getting documents: " + task.getException());
-                    }
-                }
-            });
+                    });
         }
         listViewAll.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -153,15 +130,16 @@ public class ProfessorHomePage extends AppCompatActivity {
                 // Get the selected course from the list
                 Course selectedCourse = classListAll.get(position);
 
-                // Create an intent to open the CourseDetailsActivity
+                // Create an intent to open the gradebookPage
                 Intent intent = new Intent(ProfessorHomePage.this, gradebookPage.class);
+
+                // Pass the class document ID to the gradebookPage activity
+                intent.putExtra("classDocumentId", selectedCourse.getId());
 
                 // Start the new activity
                 startActivity(intent);
             }
         });
-
-
     }
 
     private void showProfilePopupMenu(View view) {
@@ -336,7 +314,6 @@ public class ProfessorHomePage extends AppCompatActivity {
                 // User cancelled the dialog
             }
         });
-
         AlertDialog dialog = builder.create();
         dialog.show();
     }
@@ -356,8 +333,10 @@ public class ProfessorHomePage extends AppCompatActivity {
                                 calendar.set(Calendar.SECOND, 0);
                                 calendar.set(Calendar.MILLISECOND, 0);
 
-                                SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
-                                dateButton.setText(dateTimeFormat.format(calendar.getTime()));
+                                // Use the updated pattern and add ordinal indicator
+                                SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault());
+                                String dateString = dateFormat.format(calendar.getTime());
+                                dateButton.setText(getDateWithOrdinal(dateString));
                             },
                             calendar.get(Calendar.HOUR_OF_DAY),
                             calendar.get(Calendar.MINUTE),
@@ -368,5 +347,23 @@ public class ProfessorHomePage extends AppCompatActivity {
                 year, month, day
         );
         datePickerDialog.show();
+    }
+
+    private String getDateWithOrdinal(String dateString) {
+        String[] splitDate = dateString.split(" ");
+        int day = Integer.parseInt(splitDate[1].replaceAll(",", ""));
+        return splitDate[0] + " " + day + getDayOfMonthSuffix(day) + ", " + splitDate[2] + " at " + splitDate[3] + " " + splitDate[4];
+    }
+
+    private String getDayOfMonthSuffix(final int n) {
+        if (n >= 11 && n <= 13) {
+            return "th";
+        }
+        switch (n % 10) {
+            case 1:  return "st";
+            case 2:  return "nd";
+            case 3:  return "rd";
+            default: return "th";
+        }
     }
 }

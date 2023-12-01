@@ -95,6 +95,16 @@ public class CourseDetails extends AppCompatActivity {
             }
         });
 
+        Button seeGradebook = findViewById(R.id.seeGradeBookButton);
+        seeGradebook.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(CourseDetails.this, gradebookPage.class);
+                intent.putExtra("classDocumentId", classId);
+                startActivity(intent);
+            }
+        });
+
         try {
             BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
             Bitmap bitmap = barcodeEncoder.encodeBitmap(classId, BarcodeFormat.QR_CODE, 400, 400);

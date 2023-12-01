@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.cs407.attendanceapp2.R;
@@ -25,7 +26,28 @@ public class SignUpPage extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_up_page);
         mAuth = FirebaseAuth.getInstance();
+
+        ImageButton backButton = findViewById(R.id.backButton);
+        backButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(SignUpPage.this, LoginPage.class);
+                startActivity(intent);
+            }
+        });
     }
+
+    public void swapUserType(View view) {
+        CheckBox studentCheck = findViewById(R.id.studentCheck);
+        CheckBox professorCheck = findViewById(R.id.professorCheck);
+
+        if(view.getId() == R.id.studentCheck) {
+            professorCheck.setChecked(false);
+        } else if(view.getId() == R.id.professorCheck) {
+            studentCheck.setChecked(false);
+        }
+    }
+
 
     public void finishSignUpClick(View view) {
         EditText emailTextField = findViewById(R.id.email);

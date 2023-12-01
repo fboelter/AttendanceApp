@@ -95,8 +95,8 @@ public class ProfessorHomePage extends AppCompatActivity {
     private void setupListViewItemClickListener() {
         listViewAll.setOnItemClickListener((parent, view, position, id) -> {
             Course selectedCourse = classListAll.get(position);
-            Intent intent = new Intent(ProfessorHomePage.this, gradebookPage.class);
-            intent.putExtra("classDocumentId", selectedCourse.getId());
+            Intent intent = new Intent(ProfessorHomePage.this, CourseDetails.class);
+            intent.putExtra("classId", selectedCourse.getId());
             startActivity(intent);
         });
     }

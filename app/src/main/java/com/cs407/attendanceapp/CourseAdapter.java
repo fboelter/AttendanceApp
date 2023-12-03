@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -33,6 +34,14 @@ public class CourseAdapter extends ArrayAdapter<Course> {
         if (classModel != null) {
             classNameTextView.setText(classModel.getCourseName());
             timeRange.setText(classModel.getTimeRange());
+
+            ImageButton attendanceButton = convertView.findViewById(R.id.attendanceButton);
+            if (classModel.isClassHappeningNow() && classModel.isCourseScheduledToday())
+            {
+                attendanceButton.setVisibility(View.VISIBLE);
+            } else {
+                attendanceButton.setVisibility(View.GONE);
+            }
         }
 
         return convertView;

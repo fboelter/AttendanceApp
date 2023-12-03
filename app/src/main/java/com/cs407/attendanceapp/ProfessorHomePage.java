@@ -114,10 +114,15 @@ public class ProfessorHomePage extends AppCompatActivity {
                                 String timeRange = startTime + " - " + endTime;
                                 List<String> daysOfWeek = (List<String>) classDocument.get("days_of_week");
 
-                                Course course = new Course(className, timeRange, classDocumentId);
+                                Course course = new Course(className, timeRange, classDocumentId, daysOfWeek);
                                 classListAll.add(course);
                                 if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
                                     classList.add(course);
+                                    if (currentDate.after(timeStart.toDate()) && currentDate.before(timeEnd.toDate()))
+                                    {
+                                        // make the button on the list item for the current day classList.item.button visible
+
+                                    }
                                 }
                             }
                             adapter.notifyDataSetChanged();

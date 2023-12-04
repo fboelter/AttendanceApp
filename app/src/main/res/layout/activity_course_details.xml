@@ -50,7 +50,7 @@
         android:id="@+id/qrCodeImageView"
         android:layout_width="211dp"
         android:layout_height="186dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView21" />
@@ -90,11 +90,11 @@
 
     <TextView
         android:id="@+id/classStartText"
-        android:layout_width="250dp"
-        android:layout_height="29dp"
+        android:layout_width="253dp"
+        android:layout_height="43dp"
         android:layout_marginStart="80dp"
         android:layout_marginTop="12dp"
-        android:text="Class Start Date: "
+        android:text="Class Dates: "
         android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/classDaysButton" />
@@ -105,7 +105,7 @@
         android:layout_height="29dp"
         android:layout_marginStart="80dp"
         android:layout_marginTop="12dp"
-        android:text="Class End Date: "
+        android:text="Class Time: "
         android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/classStartText" />
@@ -114,7 +114,7 @@
         android:id="@+id/editCourseButton"
         android:layout_width="133dp"
         android:layout_height="48dp"
-        android:layout_marginStart="56dp"
+        android:layout_marginStart="52dp"
         android:layout_marginBottom="116dp"
         android:text="Edit Details"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -124,11 +124,13 @@
         android:id="@+id/deleteCourseButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="56dp"
+        android:layout_marginEnd="64dp"
         android:layout_marginBottom="116dp"
         android:text="Delete Course"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toEndOf="@+id/editCourseButton" />
 
     <ImageButton
         android:id="@+id/backButton"
@@ -146,7 +148,7 @@
         android:id="@+id/seeGradeBookButton"
         android:layout_width="205dp"
         android:layout_height="62dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="40dp"
         android:background="#CA1414"
         android:backgroundTint="#BC2B2B"
         android:drawableTint="#A61313"

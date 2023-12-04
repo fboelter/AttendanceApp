@@ -81,4 +81,29 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Select an End Date for your class!"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Class Start Time"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/buttonStartTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select Class Start Time"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Class End Time"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/buttonEndTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select Class End Time"/>
+
 </LinearLayout>

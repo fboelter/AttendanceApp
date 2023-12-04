@@ -195,13 +195,20 @@ public class ProfessorHomePage extends AppCompatActivity {
         View dialogView = inflater.inflate(R.layout.dialogue_add_course, null);
         builder.setView(dialogView);
 
-        // Find the buttons in the dialog layout
-        Button buttonStartDate = dialogView.findViewById(R.id.buttonStartDate);
-        Button buttonEndDate = dialogView.findViewById(R.id.buttonEndDate);
-
         // Initialize the calendars
         final Calendar startDateCalendar = Calendar.getInstance();
         final Calendar endDateCalendar = Calendar.getInstance();
+
+        // Find the buttons in the dialog layout
+        Button buttonStartDate = dialogView.findViewById(R.id.buttonStartDate);
+        Button buttonEndDate = dialogView.findViewById(R.id.buttonEndDate);
+        Button buttonStartTime = dialogView.findViewById(R.id.buttonStartTime);
+        Button buttonEndTime = dialogView.findViewById(R.id.buttonEndTime);
+
+        buttonStartDate.setOnClickListener(v -> showDatePickerDialog(startDateCalendar, buttonStartDate));
+        buttonEndDate.setOnClickListener(v -> showDatePickerDialog(endDateCalendar, buttonEndDate));
+        buttonStartTime.setOnClickListener(v -> showTimePickerDialog(startDateCalendar, buttonStartTime));
+        buttonEndTime.setOnClickListener(v -> showTimePickerDialog(endDateCalendar, buttonEndTime));
 
         CheckBox checkBoxMonday = dialogView.findViewById(R.id.checkboxMonday);
         CheckBox checkBoxTuesday = dialogView.findViewById(R.id.checkboxTuesday);
@@ -214,20 +221,7 @@ public class ProfessorHomePage extends AppCompatActivity {
         String userEmail = currentUser.getEmail();
 
 
-        // Set the onClickListeners for the date buttons
-        buttonStartDate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showDatePickerDialog(startDateCalendar, buttonStartDate);
-            }
-        });
 
-        buttonEndDate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showDatePickerDialog(endDateCalendar, buttonEndDate);
-            }
-        });
 
         EditText courseNameEditText = dialogView.findViewById(R.id.editTextCourseName);
         // Set up checkboxes or toggle buttons for days of the week
@@ -322,33 +316,48 @@ public class ProfessorHomePage extends AppCompatActivity {
         DatePickerDialog datePickerDialog = new DatePickerDialog(
                 this,
                 (view, selectedYear, selectedMonth, selectedDayOfMonth) -> {
-                    TimePickerDialog timePickerDialog = new TimePickerDialog(
-                            this,
-                            (timeView, selectedHour, selectedMinute) -> {
-                                calendar.set(selectedYear, selectedMonth, selectedDayOfMonth, selectedHour, selectedMinute);
-                                calendar.set(Calendar.SECOND, 0);
-                                calendar.set(Calendar.MILLISECOND, 0);
+                    // Set only the year, month, and day on the calendar instance
+                    calendar.set(Calendar.YEAR, selectedYear);
+                    calendar.set(Calendar.MONTH, selectedMonth);
+                    calendar.set(Calendar.DAY_OF_MONTH, selectedDayOfMonth);
 
-                                // Use the updated pattern and add ordinal indicator
-                                SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault());
-                                String dateString = dateFormat.format(calendar.getTime());
-                                dateButton.setText(getDateWithOrdinal(dateString));
-                            },
-                            calendar.get(Calendar.HOUR_OF_DAY),
-                            calendar.get(Calendar.MINUTE),
-                            false
-                    );
-                    timePickerDialog.show();
+                    // Update the text on the button to reflect the chosen date
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+                    String dateString = dateFormat.format(calendar.getTime());
+                    dateButton.setText(getDateWithOrdinal(dateString)); // Assuming getDateWithOrdinal() adds the ordinal indicator to the date
                 },
                 year, month, day
         );
         datePickerDialog.show();
     }
 
+    private void showTimePickerDialog(final Calendar calendar, final Button timeButton) {
+        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        int minute = calendar.get(Calendar.MINUTE);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(
+                this,
+                (view, selectedHour, selectedMinute) -> {
+                    // Set only the hour and minute on the calendar instance
+                    calendar.set(Calendar.HOUR_OF_DAY, selectedHour);
+                    calendar.set(Calendar.MINUTE, selectedMinute);
+                    calendar.set(Calendar.SECOND, 0);
+                    calendar.set(Calendar.MILLISECOND, 0);
+
+                    // Update the text on the button to reflect the chosen time
+                    SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
+                    String timeString = timeFormat.format(calendar.getTime());
+                    timeButton.setText(timeString);
+                },
+                hour, minute, false
+        );
+        timePickerDialog.show();
+    }
+
     private String getDateWithOrdinal(String dateString) {
         String[] splitDate = dateString.split(" ");
         int day = Integer.parseInt(splitDate[1].replaceAll(",", ""));
-        return splitDate[0] + " " + day + getDayOfMonthSuffix(day) + ", " + splitDate[2] + " at " + splitDate[3] + " " + splitDate[4];
+        return splitDate[0] + " " + day + getDayOfMonthSuffix(day) + ", " + splitDate[2];
     }
 
     private String getDayOfMonthSuffix(final int n) {

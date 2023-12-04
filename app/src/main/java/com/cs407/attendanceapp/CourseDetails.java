@@ -51,7 +51,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -173,25 +176,43 @@ public class CourseDetails extends AppCompatActivity {
                     courseName = documentSnapshot.getString("course_name");
                     textViewCourseName.setText(courseName);
 
+                    // Order days correctly
+                    List<String> daysOfWeekOrder = Arrays.asList("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday");
                     days = (List<String>) documentSnapshot.get("days_of_week");
+                    Collections.sort(days, Comparator.comparingInt(daysOfWeekOrder::indexOf));
                     daysJoined = TextUtils.join(", ", days);
+
                     SpannableString daysSpannable = new SpannableString("Meets On: " + daysJoined);
                     daysSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Meets On:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     textViewClassDays.setText(daysSpannable);
 
                     startDate = documentSnapshot.getDate("time_start");
                     endDate = documentSnapshot.getDate("time_end");
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
 
-                    String startText = "Class Start Date: " + (startDate != null ? dateFormat.format(startDate) : "N/A");
-                    SpannableString startSpannable = new SpannableString(startText);
-                    startSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Class Start Date:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    textViewClassStart.setText(startSpannable);
+                    // Use SimpleDateFormat to format the dates and times
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+                    SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
 
-                    String endText = "Class End Date: " + (endDate != null ? dateFormat.format(endDate) : "N/A");
-                    SpannableString endSpannable = new SpannableString(endText);
-                    endSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Class End Date:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    textViewClassEnd.setText(endSpannable);
+                    // Format the dates and times using your existing methods
+                    String startDateFormatted = startDate != null ? getDateWithOrdinal(dateFormat.format(startDate)) : "N/A";
+                    String endDateFormatted = endDate != null ? getDateWithOrdinal(dateFormat.format(endDate)) : "N/A";
+                    String startTimeFormatted = startDate != null ? timeFormat.format(startDate) : "N/A";
+                    String endTimeFormatted = endDate != null ? timeFormat.format(endDate) : "N/A";
+
+                    // Construct the full strings for date range and time range
+                    String dateRangeText = "Class Dates: " + startDateFormatted + " - " + endDateFormatted;
+                    String timeRangeText = "Class Time: " + startTimeFormatted + " - " + endTimeFormatted;
+
+                    // Apply styling for the bold part
+                    SpannableString dateRangeSpannable = new SpannableString(dateRangeText);
+                    dateRangeSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Class Dates:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                    SpannableString timeRangeSpannable = new SpannableString(timeRangeText);
+                    timeRangeSpannable.setSpan(new StyleSpan(Typeface.BOLD), 0, "Class Time:".length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                    // Set the text to TextViews
+                    textViewClassStart.setText(dateRangeSpannable);
+                    textViewClassEnd.setText(timeRangeSpannable);
                 } else {
                     // Document does not exist
                 }
@@ -217,11 +238,13 @@ public class CourseDetails extends AppCompatActivity {
 
         Button buttonStartDate = dialogView.findViewById(R.id.buttonStartDate);
         Button buttonEndDate = dialogView.findViewById(R.id.buttonEndDate);
+        Button buttonStartTime = dialogView.findViewById(R.id.buttonStartTime);
+        Button buttonEndTime = dialogView.findViewById(R.id.buttonEndTime);
 
         final Calendar startCalendar = Calendar.getInstance();
         final Calendar endCalendar = Calendar.getInstance();
 
-        // Set the calendars to the start and end dates if they are not null
+        // Set the calendars to the start and end dates (which include time)
         if (startDate != null) {
             startCalendar.setTime(startDate);
         }
@@ -229,8 +252,22 @@ public class CourseDetails extends AppCompatActivity {
             endCalendar.setTime(endDate);
         }
 
+        // Set onClickListeners for the date buttons
         buttonStartDate.setOnClickListener(v -> showDatePickerDialog(startCalendar, buttonStartDate));
         buttonEndDate.setOnClickListener(v -> showDatePickerDialog(endCalendar, buttonEndDate));
+
+        // Set onClickListeners for the time buttons, using the same start and end calendars
+        buttonStartTime.setOnClickListener(v -> showTimePickerDialog(startCalendar, buttonStartTime));
+        buttonEndTime.setOnClickListener(v -> showTimePickerDialog(endCalendar, buttonEndTime));
+
+        // Format and set the button texts for dates and times
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+        SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
+
+        buttonStartDate.setText(startDate != null ? getDateWithOrdinal(dateFormat.format(startDate)) : "Select a Start Date for your class!");
+        buttonEndDate.setText(endDate != null ? getDateWithOrdinal(dateFormat.format(endDate)) : "Select an End Date for your class!");
+        buttonStartTime.setText(startDate != null ? timeFormat.format(startDate) : "Select Start Time");
+        buttonEndTime.setText(endDate != null ? timeFormat.format(endDate) : "Select End Time");
 
         // Pre-check the CheckBoxes based on the daysOfWeek list
         Map<String, CheckBox> checkBoxMap = new HashMap<>();
@@ -246,11 +283,6 @@ public class CourseDetails extends AppCompatActivity {
                 checkBox.setChecked(true);
             }
         }
-
-        // Pre-set the date buttons with the start and end dates
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault());
-        buttonStartDate.setText(startDate != null ? getDateWithOrdinal(dateFormat.format(startDate)) : "Select a Start Date for your class!");
-        buttonEndDate.setText(endDate != null ? getDateWithOrdinal(dateFormat.format(endDate)) : "Select an End Date for your class!");
 
         builder.setPositiveButton("Save New Details", new DialogInterface.OnClickListener() {
             @Override
@@ -332,33 +364,38 @@ public class CourseDetails extends AppCompatActivity {
         DatePickerDialog datePickerDialog = new DatePickerDialog(
                 this,
                 (view, selectedYear, selectedMonth, selectedDayOfMonth) -> {
-                    TimePickerDialog timePickerDialog = new TimePickerDialog(
-                            this,
-                            (timeView, selectedHour, selectedMinute) -> {
-                                calendar.set(selectedYear, selectedMonth, selectedDayOfMonth, selectedHour, selectedMinute);
-                                calendar.set(Calendar.SECOND, 0);
-                                calendar.set(Calendar.MILLISECOND, 0);
-
-                                // Use the updated pattern and add ordinal indicator
-                                SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy 'at' h:mm a", Locale.getDefault());
-                                String dateString = dateFormat.format(calendar.getTime());
-                                dateButton.setText(getDateWithOrdinal(dateString));
-                            },
-                            calendar.get(Calendar.HOUR_OF_DAY),
-                            calendar.get(Calendar.MINUTE),
-                            false
-                    );
-                    timePickerDialog.show();
+                    calendar.set(selectedYear, selectedMonth, selectedDayOfMonth);
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+                    String dateString = dateFormat.format(calendar.getTime());
+                    dateButton.setText(getDateWithOrdinal(dateString));
                 },
                 year, month, day
         );
         datePickerDialog.show();
     }
 
+    private void showTimePickerDialog(final Calendar calendar, final Button timeButton) {
+        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        int minute = calendar.get(Calendar.MINUTE);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(
+                this,
+                (view, selectedHour, selectedMinute) -> {
+                    calendar.set(Calendar.HOUR_OF_DAY, selectedHour);
+                    calendar.set(Calendar.MINUTE, selectedMinute);
+                    SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
+                    String timeString = timeFormat.format(calendar.getTime());
+                    timeButton.setText(timeString);
+                },
+                hour, minute, false
+        );
+        timePickerDialog.show();
+    }
+
     private String getDateWithOrdinal(String dateString) {
         String[] splitDate = dateString.split(" ");
         int day = Integer.parseInt(splitDate[1].replaceAll(",", ""));
-        return splitDate[0] + " " + day + getDayOfMonthSuffix(day) + ", " + splitDate[2] + " at " + splitDate[3] + " " + splitDate[4];
+        return splitDate[0] + " " + day + getDayOfMonthSuffix(day) + ", " + splitDate[2];
     }
 
     private String getDayOfMonthSuffix(final int n) {

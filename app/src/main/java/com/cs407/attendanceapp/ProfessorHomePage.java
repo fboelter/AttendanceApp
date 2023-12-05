@@ -119,13 +119,8 @@ public class ProfessorHomePage extends AppCompatActivity {
 
                                 Course course = new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate);
                                 classListAll.add(course);
-                                if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
+                                if (course.isCourseScheduledToday()) {
                                     classList.add(course);
-                                    if (currentDate.after(timeStart.toDate()) && currentDate.before(timeEnd.toDate()))
-                                    {
-                                        // make the button on the list item for the current day classList.item.button visible
-
-                                    }
                                 }
                             }
                             adapter.notifyDataSetChanged();
@@ -158,22 +153,6 @@ public class ProfessorHomePage extends AppCompatActivity {
         });
 
         popupMenu.show();
-    }
-
-    private boolean isCourseScheduledToday(Date currentDate, List<String> daysOfWeek, Timestamp timeStart, Timestamp timeEnd) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(currentDate);
-        int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
-        String currentDay = getDayOfWeek(currentDayOfWeek);
-
-        if (daysOfWeek != null && daysOfWeek.contains(currentDay)) {
-            Date startTime = timeStart.toDate();
-            Date endTime = timeEnd.toDate();
-
-            return currentDate.after(startTime) && currentDate.before(endTime);
-        }
-
-        return false;
     }
 
     private String getDayOfWeek(int dayOfWeek) {

@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Calendar;
@@ -88,7 +89,13 @@ public class Course {
 
         Log.i("INFO","daysOfWeek != null: " + (daysOfWeek != null) + "\tdaysOfWeek.contains(currentDay): " + daysOfWeek.contains(currentDay));
         if (daysOfWeek != null && daysOfWeek.contains(currentDay)) {
-            return currentDate.after(this.startDate) && currentDate.before(this.endDate);
+            // set time to 12am
+            LocalDateTime localDateTime = this.startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+            LocalDateTime updatedLocalDateTime = localDateTime.withHour(0).withMinute(0).withSecond(0);
+            Date startDateTwelveAm = Date.from(updatedLocalDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            Log.i("INFO", "startDateTwelveAm: " + startDateTwelveAm.toString());
+            Log.i("INFO", "currentDate.after(startDateTwelveAm) && currentDate.before(this.endDate): " + (currentDate.after(startDateTwelveAm) && currentDate.before(this.endDate)));
+            return currentDate.after(startDateTwelveAm) && currentDate.before(this.endDate);
         }
 
         return false;

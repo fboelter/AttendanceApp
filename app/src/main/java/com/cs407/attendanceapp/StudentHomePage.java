@@ -143,16 +143,16 @@ public class StudentHomePage extends AppCompatActivity {
 
                             // Check if the user is enrolled in this class
                             if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                Log.i("INFO", "Should add className " + className + " to screen");
-                                classListAll.add(new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate));
+                                Course course = new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate);
+                                classListAll.add(course);
                                 adapter_all.notifyDataSetChanged();
-                            }
 
-                            // Check if the class is scheduled for the current day
-                            if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
-                                if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                    classList.add(new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate));
-                                    adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
+                                // Check if the class is scheduled for the current day
+                                if (course.isCourseScheduledToday()) {
+                                    if (studentEmails != null && studentEmails.contains(userEmail)) {
+                                        classList.add(new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate));
+                                        adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
+                                    }
                                 }
                             }
                         }
@@ -164,7 +164,6 @@ public class StudentHomePage extends AppCompatActivity {
             });
         }
     }
-
 
     private void showProfilePopupMenu(View view) {
         PopupMenu popupMenu = new PopupMenu(this, view);
@@ -186,26 +185,6 @@ public class StudentHomePage extends AppCompatActivity {
             }
         });
         popupMenu.show();
-    }
-
-    private boolean isCourseScheduledToday(Date currentDate, List<String> daysOfWeek, Timestamp timeStart, Timestamp timeEnd) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(currentDate);
-        int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
-        String currentDay = getDayOfWeek(currentDayOfWeek);
-
-        if (daysOfWeek != null && daysOfWeek.contains(currentDay)) {
-            Date startTime = timeStart.toDate();
-            Date endTime = timeEnd.toDate();
-
-            return currentDate.after(startTime) && currentDate.before(endTime);
-        }
-        return false;
-    }
-
-    private String getDayOfWeek(int dayOfWeek) {
-        String[] days = new String[]{"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-        return days[dayOfWeek];
     }
 
     private String formatTime(Timestamp timestamp) {

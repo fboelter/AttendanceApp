@@ -1,7 +1,6 @@
 package com.cs407.attendanceapp;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
+import android.Manifest.permission;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -60,8 +59,9 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
     private CourseAdapter adapter;
     private CourseAdapter adapter_all;
     private ImageButton addCourseStudentButton;
-    private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA};
+    private static final String[] REQUIRED_PERMISSIONS = {permission.CAMERA};
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
+    private static final int ACCESS_FINE_LOCATION_REQUEST_CODE = 101;
 
     LocationManager locationManager;
     LocationListener locationListener;
@@ -233,7 +233,7 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
     private void requestCameraPermission() {
         Log.i("INFO", "Requesting camera permission");
         // Check if the CAMERA permission has been granted
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+        if (ContextCompat.checkSelfPermission(this, permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED) {
             Log.i("INFO", "Permission granted. Starting camera");
             // Camera permission is already granted, proceed with camera-related operations
@@ -249,20 +249,36 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
         }
     }
 
-    @SuppressLint("MissingSuperCall")
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Camera permission granted, proceed with camera-related operations
-                Log.i("INFO", "Permission request granted after request, starting camera");
-                scanBarcode();
-            } else {
-                // Camera permission denied. You may want to show a message or take alternative actions.
-                Toast.makeText(this,
-                        "Permission request denied",
-                        Toast.LENGTH_SHORT).show();
-            }
+            handleCameraPermissionResult(grantResults);
+        } else if (requestCode == ACCESS_FINE_LOCATION_REQUEST_CODE) {
+            handleLocationPermissionResult(grantResults);
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    private void handleCameraPermissionResult(int[] grantResults) {
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // Camera permission granted, proceed with camera-related operations
+            Log.i("INFO", "Camera permission granted, starting camera");
+            scanBarcode(); // Replace with your camera-related operation
+        } else {
+            // Camera permission denied. You may want to show a message or take alternative actions.
+            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void handleLocationPermissionResult(int[] grantResults) {
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // Location permission granted, proceed with location-related operations
+            Log.i("INFO", "Location permission granted, starting location updates");
+            startListening(); // Replace with your location-related operation
+        } else {
+            // Location permission denied. You may want to show a message or take alternative actions.
+            Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -310,8 +326,8 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
         if (Build.VERSION.SDK_INT < 23) {
             startListening();
         } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            if (ContextCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{permission.ACCESS_FINE_LOCATION}, 1);
             } else {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
                 Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -321,7 +337,7 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
     }
 
     private void startListening() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         }
     }

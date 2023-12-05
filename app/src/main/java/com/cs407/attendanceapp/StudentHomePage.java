@@ -9,7 +9,7 @@ import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -51,7 +51,7 @@ public class StudentHomePage extends AppCompatActivity {
     private List<Course> classListAll;
     private CourseAdapter adapter;
     private CourseAdapter adapter_all;
-    private Button addCourseStudentButton;
+    private ImageButton addCourseStudentButton;
     private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA};
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
 

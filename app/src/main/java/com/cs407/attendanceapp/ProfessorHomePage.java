@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -66,7 +67,7 @@ public class ProfessorHomePage extends AppCompatActivity {
     private void initializeUIComponents() {
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
-        Button addClassButton = findViewById(R.id.plusButton);
+        ImageButton addClassButton = findViewById(R.id.plusButton);
         addClassButton.setOnClickListener(v -> showAddCourseDialog());
         mAuth = FirebaseAuth.getInstance();
     }

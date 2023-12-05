@@ -1,6 +1,7 @@
 package com.cs407.attendanceapp;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,9 +37,14 @@ public class CourseAdapter extends ArrayAdapter<Course> {
             timeRange.setText(classModel.getTimeRange());
 
             ImageButton attendanceButton = convertView.findViewById(R.id.attendanceButton);
-            if (classModel.isClassHappeningNow() && classModel.isCourseScheduledToday())
+            Log.i("INFO", classModel.getCourseName() + " happening now? " + classModel.isClassHappeningNow());
+            Log.i("INFO", classModel.getCourseName() + " today? " + classModel.isCourseScheduledToday());
+            Log.i("INFO", "parentToString() " + parent.getResources().getResourceName(parent.getId()));
+            String parentViewResourceName = parent.getResources().getResourceName(parent.getId());
+            if (classModel.isClassHappeningNow() && classModel.isCourseScheduledToday() && !parentViewResourceName.contains("all"))
             {
-                attendanceButton.setVisibility(View.VISIBLE);
+                Log.i("INFO", "Setting " + classModel.getCourseName() + " button to visible");
+                convertView.findViewById(R.id.attendanceButton).setVisibility(View.VISIBLE);
             } else {
                 attendanceButton.setVisibility(View.GONE);
             }

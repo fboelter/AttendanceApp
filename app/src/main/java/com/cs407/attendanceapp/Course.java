@@ -1,5 +1,7 @@
 package com.cs407.attendanceapp;
 
+import android.util.Log;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalTime;
@@ -12,20 +14,18 @@ public class Course {
     private String courseName;
     private String timeRange;
     private String classDocumentId;
+    private Date startDate;
+    private Date endDate;
 
     private List<String> daysOfWeek;
 
-    public Course(String courseName, String timeRange, String classDocumentId) {
-        this.courseName = courseName;
-        this.timeRange = timeRange;
-        this.classDocumentId = classDocumentId;
-    }
-
-    public Course(String courseName, String timeRange, String classDocumentId, List<String> daysOfWeek) {
+    public Course(String courseName, String timeRange, String classDocumentId, List<String> daysOfWeek, Date startDate, Date endDate) {
         this.courseName = courseName;
         this.timeRange = timeRange;
         this.classDocumentId = classDocumentId;
         this.daysOfWeek = daysOfWeek;
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 
     public String getCourseName() {
@@ -40,19 +40,9 @@ public class Course {
 
     public List<String> getDaysOfWeek() { return daysOfWeek; }
 
-    private String[] getStartAndEndTimes()
+    private Date[] getStartAndEndTimes()
     {
-        // timeRange = startTime + " - " + endTime
-        String[] times = timeRange.split("-");
-        String startTime = times[0].substring(0, times[0].length()-2);
-        String endTime = times[1].substring(0, times[0].length()-2);
-        times[0] = startTime;
-        times[1] = endTime;
-        return times;
-    }
-
-    private Date[] getStartAndEndDates()
-    {
+        Log.i("INFO", "timeRange: " + timeRange);
         String[] times = timeRange.split("-");
         String startTime = times[0].substring(0, times[0].length()-2);
         String endTime = times[1].substring(0, times[0].length()-2);
@@ -65,6 +55,8 @@ public class Course {
             Date[] dates = new Date[2];
             dates[0] = startTimeAsDate;
             dates[1] = endTimeAsDate;
+            Log.i("INFO", "start time: " + dates[0].toString());
+            Log.i("INFO", "end time: " + dates[1].toString());
             return dates;
         } catch (ParseException e) {
             throw new RuntimeException(e);
@@ -73,7 +65,7 @@ public class Course {
 
     public boolean isClassHappeningNow()
     {
-        Date[] dates = getStartAndEndDates();
+        Date[] dates = getStartAndEndTimes();
         LocalTime startLocalTime = dates[0].toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
         LocalTime endLocalTime = dates[1].toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
 
@@ -88,14 +80,15 @@ public class Course {
     public boolean isCourseScheduledToday() {
         Calendar calendar = Calendar.getInstance();
         Date currentDate = Calendar.getInstance().getTime();
+        Log.i("INFO", "currentDate = " + currentDate.toString());
         calendar.setTime(currentDate);
         int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
         String currentDay = getDayOfWeek(currentDayOfWeek);
+        Log.i("INFO", "current day of the week: " + currentDay);
 
+        Log.i("INFO","daysOfWeek != null: " + (daysOfWeek != null) + "\tdaysOfWeek.contains(currentDay): " + daysOfWeek.contains(currentDay));
         if (daysOfWeek != null && daysOfWeek.contains(currentDay)) {
-            Date[] dates = getStartAndEndDates();
-
-            return currentDate.after(dates[0]) && currentDate.before(dates[1]);
+            return currentDate.after(this.startDate) && currentDate.before(this.endDate);
         }
 
         return false;

@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -123,6 +122,8 @@ public class StudentHomePage extends AppCompatActivity {
                             Timestamp timeEnd = classDocument.getTimestamp("time_end");
                             String startTime = formatTime(timeStart);
                             String endTime = formatTime(timeEnd);
+                            Date startDate = formatDate(timeStart);
+                            Date endDate = formatDate(timeEnd);
                             String timeRange = startTime + " - " + endTime;
 
                             List<String> studentEmails = null;
@@ -143,14 +144,14 @@ public class StudentHomePage extends AppCompatActivity {
                             // Check if the user is enrolled in this class
                             if (studentEmails != null && studentEmails.contains(userEmail)) {
                                 Log.i("INFO", "Should add className " + className + " to screen");
-                                classListAll.add(new Course(className, timeRange, classDocumentId));
+                                classListAll.add(new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate));
                                 adapter_all.notifyDataSetChanged();
                             }
 
                             // Check if the class is scheduled for the current day
                             if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
                                 if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                    classList.add(new Course(className, timeRange, classDocumentId));
+                                    classList.add(new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate));
                                     adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
                                 }
                             }
@@ -211,6 +212,10 @@ public class StudentHomePage extends AppCompatActivity {
         Date date = timestamp.toDate();
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mma", Locale.US);
         return sdf.format(date);
+    }
+
+    private Date formatDate(Timestamp timestamp) {
+        return timestamp.toDate();
     }
 
     private void requestCameraPermission() {

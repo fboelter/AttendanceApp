@@ -10,7 +10,6 @@ import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -109,12 +108,16 @@ public class ProfessorHomePage extends AppCompatActivity {
                                 String className = classDocument.getString("course_name");
                                 Timestamp timeStart = classDocument.getTimestamp("time_start");
                                 Timestamp timeEnd = classDocument.getTimestamp("time_end");
+                                Log.i("INFO", "timeEnd Timestamp: " + timeEnd);
                                 String startTime = formatTime(timeStart);
                                 String endTime = formatTime(timeEnd);
                                 String timeRange = startTime + " - " + endTime;
+                                Date startDate = formatDate(timeStart);
+                                Date endDate = formatDate(timeEnd);
+                                Log.i("INFO", "timeRange in professor course creation: " + timeRange);
                                 List<String> daysOfWeek = (List<String>) classDocument.get("days_of_week");
 
-                                Course course = new Course(className, timeRange, classDocumentId, daysOfWeek);
+                                Course course = new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate);
                                 classListAll.add(course);
                                 if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
                                     classList.add(course);
@@ -176,6 +179,10 @@ public class ProfessorHomePage extends AppCompatActivity {
     private String getDayOfWeek(int dayOfWeek) {
         String[] days = new String[]{"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
         return days[dayOfWeek];
+    }
+
+    private Date formatDate(Timestamp timestamp) {
+        return timestamp.toDate();
     }
 
     private String formatTime(Timestamp timestamp) {

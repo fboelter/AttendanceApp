@@ -45,6 +45,12 @@ public class CourseAdapter extends ArrayAdapter<Course> {
             {
                 Log.i("INFO", "Setting " + classModel.getCourseName() + " button to visible");
                 convertView.findViewById(R.id.attendanceButton).setVisibility(View.VISIBLE);
+                attendanceButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Log.i("INFO", "Button clicked!");
+                    }
+                });
             } else {
                 attendanceButton.setVisibility(View.GONE);
             }

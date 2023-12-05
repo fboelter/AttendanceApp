@@ -1,9 +1,18 @@
 package com.cs407.attendanceapp;
 
+import android.Manifest;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,6 +31,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.cs407.attendanceapp2.R;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -34,6 +45,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -43,7 +55,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class ProfessorHomePage extends AppCompatActivity {
+public class ProfessorHomePage extends AppCompatActivity implements CourseAdapter.OnCourseClickListener {
 
     private FirebaseAuth mAuth;
     private ListView listView;
@@ -52,6 +64,8 @@ public class ProfessorHomePage extends AppCompatActivity {
     private List<Course> classListAll;
     private CourseAdapter adapter;
     private CourseAdapter adapter_all;
+    LocationManager locationManager;
+    LocationListener locationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +76,29 @@ public class ProfessorHomePage extends AppCompatActivity {
         initializeListView();
         setupListViewItemClickListener();
         fetchAndDisplayCourses();
+
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        locationListener = new LocationListener() {
+
+            @Override
+            public void onLocationChanged(@NonNull Location location) {
+                updateLocationInfo(location);
+            }
+
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+            @Override
+            public void onProviderEnabled(String s){
+
+            }
+            @Override
+            public void onProviderDisabled(String s){
+
+            }
+        };
+
     }
 
     private void initializeUIComponents() {
@@ -77,8 +114,8 @@ public class ProfessorHomePage extends AppCompatActivity {
         listViewAll = findViewById(R.id.class_list_all);
         classList = new ArrayList<>();
         classListAll = new ArrayList<>();
-        adapter = new CourseAdapter(this, classList);
-        adapter_all = new CourseAdapter(this, classListAll);
+        adapter = new CourseAdapter(this, classList, this::onCourseClick);
+        adapter_all = new CourseAdapter(this, classListAll, this::onCourseClick);
         listView.setAdapter(adapter);
         listViewAll.setAdapter(adapter_all);
     }
@@ -202,9 +239,6 @@ public class ProfessorHomePage extends AppCompatActivity {
         // Get email to set professor field
         FirebaseUser currentUser = mAuth.getCurrentUser();
         String userEmail = currentUser.getEmail();
-
-
-
 
         EditText courseNameEditText = dialogView.findViewById(R.id.editTextCourseName);
         // Set up checkboxes or toggle buttons for days of the week
@@ -352,6 +386,88 @@ public class ProfessorHomePage extends AppCompatActivity {
             case 2:  return "nd";
             case 3:  return "rd";
             default: return "th";
+        }
+    }
+
+    @Override
+    public void onCourseClick(Course course) {
+        listenForLocation();
+    }
+
+    private void listenForLocation()
+    {
+        if (Build.VERSION.SDK_INT < 23) {
+            startListening();
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            } else {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (location != null) updateLocationInfo(location);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startListening();
+        }
+    }
+
+    private void startListening() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        }
+    }
+
+    private void updateLocationInfo(Location location) {
+        Log.i("LocationInfo", location.toString());
+
+        /*
+        TextView latitudeTextView = (TextView) findViewById(R.id.latitudeTextView);
+        TextView longitudeTextView = (TextView) findViewById(R.id.longitudeTextView);
+        TextView altitudeTextView = (TextView) findViewById(R.id.altitudeTextView);
+        TextView accuracyTextView = (TextView) findViewById(R.id.accuracyTextView);
+         */
+        String latitude = String.valueOf(location.getLatitude());
+        String longitude = String.valueOf(location.getLongitude());
+        String accuracy = String.valueOf(location.getAccuracy());
+        Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
+
+        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+
+        try {
+            String address = "Could not find address";
+            List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+
+            if (listAddresses != null && listAddresses.size() > 0){
+                Log.i("PlaceInfo", listAddresses.get(0).toString());
+                address = "Address: \n";
+                if (listAddresses.get(0).getSubThoroughfare() != null) {
+                    address += listAddresses.get(0).getSubThoroughfare() + " ";
+                }
+                if (listAddresses.get(0).getThoroughfare() != null) {
+                    address += listAddresses.get(0).getThoroughfare() + " ";
+                }
+                if (listAddresses.get(0).getLocality() != null) {
+                    address += listAddresses.get(0).getLocality() + " ";
+                }
+                if (listAddresses.get(0).getPostalCode() != null) {
+                    address += listAddresses.get(0).getPostalCode() + " ";
+                }
+                if (listAddresses.get(0).getCountryName() != null) {
+                    address += listAddresses.get(0).getCountryName() + " ";
+                }
+            }
+
+            // TextView addressTextView = (TextView) findViewById(R.id.addressTextView);
+            Log.i("INFO", "Address: " + address);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

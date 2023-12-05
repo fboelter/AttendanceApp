@@ -17,8 +17,11 @@ import java.util.List;
 
 public class CourseAdapter extends ArrayAdapter<Course> {
 
-    public CourseAdapter(Context context, List<Course> classList) {
+    private OnCourseClickListener listener;
+
+    public CourseAdapter(Context context, List<Course> classList, OnCourseClickListener clickListener) {
         super(context, 0, classList);
+        this.listener = clickListener;
     }
 
     @NonNull
@@ -49,6 +52,11 @@ public class CourseAdapter extends ArrayAdapter<Course> {
                     @Override
                     public void onClick(View v) {
                         Log.i("INFO", "Button clicked!");
+
+                        // Call the interface method when the item is clicked
+                        if (listener != null) {
+                            listener.onCourseClick(getItem(position));
+                        }
                     }
                 });
             } else {
@@ -57,5 +65,10 @@ public class CourseAdapter extends ArrayAdapter<Course> {
         }
 
         return convertView;
+    }
+
+
+    public interface OnCourseClickListener {
+        void onCourseClick(Course course);
     }
 }

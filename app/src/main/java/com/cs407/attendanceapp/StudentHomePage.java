@@ -2,8 +2,15 @@ package com.cs407.attendanceapp;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
@@ -35,6 +42,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -42,7 +50,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class StudentHomePage extends AppCompatActivity {
+public class StudentHomePage extends AppCompatActivity implements CourseAdapter.OnCourseClickListener {
 
     private FirebaseAuth mAuth;
     private ListView listView;
@@ -55,22 +63,47 @@ public class StudentHomePage extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA};
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
 
+    LocationManager locationManager;
+    LocationListener locationListener;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_student_home_page);
+        setContentView(R.layout.sample);
 
         initializeUIComponents();
         initializeListView();
         setupAddCourseButtonListener();
         setupListViewItemClickListener();
         fetchAndDisplayCourses();
+
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        locationListener = new LocationListener() {
+
+            @Override
+            public void onLocationChanged(@NonNull Location location) {
+                updateLocationInfo(location);
+            }
+
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+            @Override
+            public void onProviderEnabled(String s){
+
+            }
+            @Override
+            public void onProviderDisabled(String s){
+
+            }
+        };
     }
 
     private void initializeUIComponents() {
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
-        addCourseStudentButton = findViewById(R.id.addCourseStudentButton);
+        addCourseStudentButton = findViewById(R.id.plusButton);
         mAuth = FirebaseAuth.getInstance();
     }
 
@@ -79,8 +112,8 @@ public class StudentHomePage extends AppCompatActivity {
         listViewAll = findViewById(R.id.class_list_all);
         classList = new ArrayList<>();
         classListAll = new ArrayList<>();
-        adapter = new CourseAdapter(this, classList);
-        adapter_all = new CourseAdapter(this, classListAll);
+        adapter = new CourseAdapter(this, classList, this::onCourseClick);
+        adapter_all = new CourseAdapter(this, classListAll, this::onCourseClick);
         listView.setAdapter(adapter);
         listViewAll.setAdapter(adapter_all);
     }
@@ -265,5 +298,78 @@ public class StudentHomePage extends AppCompatActivity {
                             // Task failed with an exception
                         });
 
+    }
+
+    @Override
+    public void onCourseClick(Course course) {
+        listenForLocation();
+    }
+
+    private void listenForLocation()
+    {
+        if (Build.VERSION.SDK_INT < 23) {
+            startListening();
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            } else {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (location != null) updateLocationInfo(location);
+            }
+        }
+    }
+
+    private void startListening() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        }
+    }
+
+    private void updateLocationInfo(Location location) {
+        Log.i("LocationInfo", location.toString());
+
+        /*
+        TextView latitudeTextView = (TextView) findViewById(R.id.latitudeTextView);
+        TextView longitudeTextView = (TextView) findViewById(R.id.longitudeTextView);
+        TextView altitudeTextView = (TextView) findViewById(R.id.altitudeTextView);
+        TextView accuracyTextView = (TextView) findViewById(R.id.accuracyTextView);
+         */
+        String latitude = String.valueOf(location.getLatitude());
+        String longitude = String.valueOf(location.getLongitude());
+        String accuracy = String.valueOf(location.getAccuracy());
+        Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
+
+        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+
+        try {
+            String address = "Could not find address";
+            List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+
+            if (listAddresses != null && listAddresses.size() > 0){
+                Log.i("PlaceInfo", listAddresses.get(0).toString());
+                address = "Address: \n";
+                if (listAddresses.get(0).getSubThoroughfare() != null) {
+                    address += listAddresses.get(0).getSubThoroughfare() + " ";
+                }
+                if (listAddresses.get(0).getThoroughfare() != null) {
+                    address += listAddresses.get(0).getThoroughfare() + " ";
+                }
+                if (listAddresses.get(0).getLocality() != null) {
+                    address += listAddresses.get(0).getLocality() + " ";
+                }
+                if (listAddresses.get(0).getPostalCode() != null) {
+                    address += listAddresses.get(0).getPostalCode() + " ";
+                }
+                if (listAddresses.get(0).getCountryName() != null) {
+                    address += listAddresses.get(0).getCountryName() + " ";
+                }
+            }
+
+            // TextView addressTextView = (TextView) findViewById(R.id.addressTextView);
+            Log.i("INFO", "Address: " + address);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

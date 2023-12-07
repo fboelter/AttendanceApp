@@ -1,5 +1,6 @@
 package com.cs407.attendanceapp;
 
+import android.Manifest;
 import android.Manifest.permission;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +35,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.mlkit.vision.barcode.common.Barcode;
@@ -65,6 +67,8 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
 
     LocationManager locationManager;
     LocationListener locationListener;
+    boolean markedPresent;
+    boolean locationObtained = false; // TODO: update setting of locationObtained and markedPresent so that you don't have to retake attendance when you sign out
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -277,7 +281,6 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
             Log.i("INFO", "Location permission granted, starting location updates");
             startListening(); // Replace with your location-related operation
         } else {
-            // Location permission denied. You may want to show a message or take alternative actions.
             Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
         }
     }
@@ -316,41 +319,98 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
 
     }
 
-    @Override
-    public void onCourseClick(Course course) {
-        listenForLocation();
+    public void takeAttendance(Course course, Location studentLocation)
+    {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.whereEqualTo("course_name", course.getCourseName())
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                // Access the GeoPoint from the Firestore document
+                                GeoPoint geoPoint = document.getGeoPoint("prof_location");
+
+                                if (geoPoint != null) {
+                                    // Extract latitude and longitude
+                                    double latitude = geoPoint.getLatitude();
+                                    double longitude = geoPoint.getLongitude();
+
+                                    // Create an Android Location object
+                                    Location professorLocation = new Location("provider");
+                                    professorLocation.setLatitude(latitude);
+                                    professorLocation.setLongitude(longitude);
+
+                                    // double rangeInMeters = document.getDouble("attendance_range");
+                                    double rangeInMeters = 10.0; // TODO: Could make this a field professors could select e.g document.getDouble("attendance_range");
+
+                                    float distance = studentLocation.distanceTo(professorLocation);
+                                    Log.i("INFO", "Distance: " + distance);
+
+                                    // Check if the distance is within the specified range
+                                    if (professorLocation.getLongitude() != 0.0 && professorLocation.getLongitude() != 0 && distance <= rangeInMeters) {
+                                        // TODO: update student gradebook with 1 to indicate attendance
+                                        markedPresent = true;
+                                        adapter.changeAttendanceButtonToCheckMark(course);
+                                        Toast.makeText(StudentHomePage.this, "You have been marked present", Toast.LENGTH_SHORT).show();
+                                    } else {
+                                        markedPresent = false;
+                                        Toast.makeText(StudentHomePage.this, "Not marked present. Consider moving closer to the front of the room", Toast.LENGTH_LONG).show();
+                                    }
+
+                                } else {
+                                    // Handle the case when prof_location is not available
+                                    Toast.makeText(StudentHomePage.this, "Could not take attendance. Professor location not available", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        } else {
+                            Log.e("Firestore", "Error getting documents: ", task.getException());
+                        }
+                    }
+                });
+
     }
 
-    private void listenForLocation()
-    {
-        if (Build.VERSION.SDK_INT < 23) {
-            startListening();
-        } else {
-            if (ContextCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{permission.ACCESS_FINE_LOCATION}, 1);
+    @Override
+    public void onCourseClick(Course course) {
+        Log.i("INFO", "Course clicked. locationObtained: " + locationObtained);
+        if (!locationObtained) {
+            listenForLocation(course);
+        }
+    }
+
+    private void listenForLocation(Course course) {
+        if (!locationObtained) {
+            if (Build.VERSION.SDK_INT < 23) {
+                startListening();
             } else {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-                Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                if (location != null) updateLocationInfo(location);
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                } else {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                    Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if (location != null & !locationObtained) {
+                        updateLocationInfo(location);
+                        locationObtained = true; // Set the flag to true after obtaining the location
+                        takeAttendance(course, location);
+                    }
+                }
             }
         }
     }
 
     private void startListening() {
-        if (ContextCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        Log.i("INFO", "Start listening. locationObtained: " + locationObtained);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         }
     }
 
     private void updateLocationInfo(Location location) {
-        Log.i("LocationInfo", location.toString());
+        Log.i("INFO", "loctationObtained: " + locationObtained);
 
-        /*
-        TextView latitudeTextView = (TextView) findViewById(R.id.latitudeTextView);
-        TextView longitudeTextView = (TextView) findViewById(R.id.longitudeTextView);
-        TextView altitudeTextView = (TextView) findViewById(R.id.altitudeTextView);
-        TextView accuracyTextView = (TextView) findViewById(R.id.accuracyTextView);
-         */
         String latitude = String.valueOf(location.getLatitude());
         String longitude = String.valueOf(location.getLongitude());
         String accuracy = String.valueOf(location.getAccuracy());
@@ -381,8 +441,6 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
                     address += listAddresses.get(0).getCountryName() + " ";
                 }
             }
-
-            // TextView addressTextView = (TextView) findViewById(R.id.addressTextView);
             Log.i("INFO", "Address: " + address);
         } catch (IOException e) {
             e.printStackTrace();

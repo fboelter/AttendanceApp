@@ -452,10 +452,10 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                                                 if (location.getLatitude() == 0 && location.getLongitude() == 0)
                                                 {
                                                     adapter.changeAttendanceButtonToAttendance(course);
-                                                    Toast.makeText(getApplicationContext(), "Attendance successfully closed", Toast.LENGTH_SHORT).show();
+                                                    Toast.makeText(ProfessorHomePage.this, "Attendance successfully closed", Toast.LENGTH_SHORT).show();
                                                 } else {
                                                     adapter.changeAttendanceButtonToCheckMark(course);
-                                                    Toast.makeText(getApplicationContext(), "Attendance is open!", Toast.LENGTH_SHORT).show();
+                                                    Toast.makeText(ProfessorHomePage.this, "Attendance is open!", Toast.LENGTH_SHORT).show();
                                                 }
 
                                             }

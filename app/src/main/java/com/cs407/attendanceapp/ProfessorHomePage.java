@@ -276,6 +276,17 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                 Timestamp timestampStart = new Timestamp(startDateCalendar.getTime());
                 Timestamp timestampEnd = new Timestamp(endDateCalendar.getTime());
 
+                // Add location range in meters
+                EditText locationRangeInput = dialogView.findViewById(R.id.locationRangeInput);
+                String locationRangeText = locationRangeInput.getText().toString();
+
+                try {
+                    double locationRange = Double.parseDouble(locationRangeText);
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                }
+
+
                 // Put data into an object
                 Map<String, Object> classData = new HashMap<>();
                 classData.put("course_name", courseName);

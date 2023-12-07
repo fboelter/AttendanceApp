@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -11,99 +10,130 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Course Name"
-        android:inputType="text"/>
+        android:inputType="text" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Days of the Week"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:text="Days of the Week" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center">
+        android:gravity="center"
+        android:orientation="vertical">
 
         <!-- Example of checkboxes for days of the week -->
         <CheckBox
             android:id="@+id/checkboxMonday"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Monday"/>
+            android:text="Monday" />
 
         <CheckBox
             android:id="@+id/checkboxTuesday"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tuesday"/>
+            android:text="Tuesday" />
 
         <CheckBox
             android:id="@+id/checkboxWednesday"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Wednesday"/>
+            android:text="Wednesday" />
 
         <CheckBox
             android:id="@+id/checkboxThursday"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Thursday"/>
+            android:text="Thursday" />
 
         <CheckBox
             android:id="@+id/checkboxFriday"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Friday"/>
+            android:text="Friday" />
 
     </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Date"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:text="Start Date" />
 
     <Button
         android:id="@+id/buttonStartDate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Select a Start Date for your class!"/>
+        android:text="Select a Start Date for your class!" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="End date"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:text="End date" />
 
     <Button
         android:id="@+id/buttonEndDate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Select an End Date for your class!"/>
+        android:text="Select an End Date for your class!" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Class Start Time"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:text="Class Start Time" />
 
     <Button
         android:id="@+id/buttonStartTime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Select Class Start Time"/>
+        android:text="Select Class Start Time" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Class End Time"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:text="Class End Time" />
 
     <Button
         android:id="@+id/buttonEndTime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Select Class End Time"/>
+        android:text="Select Class End Time" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center_vertical"
+                android:gravity="center_horizontal"
+                android:text="Location Range (m)"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/locationRangeInput"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ems="10"
+            android:inputType="number"
+            android:textSize="14sp" />
+
+    </LinearLayout>
 
 </LinearLayout>

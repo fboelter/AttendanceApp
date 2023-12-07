@@ -398,7 +398,6 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     }
 
-    // TODO: Close attendance when class ends
     private void listenForLocation(Course course) {
         if (!locationObtained) {
             if (Build.VERSION.SDK_INT < 23) {
@@ -411,60 +410,68 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                     Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                     if (location != null) {
                         updateLocationInfo(location);
+                        updateProfLocationInFireBase(course, location);
                         locationObtained = true; // Set the flag to true after obtaining the location
-
-                        // Assuming you have a "prof_location" field in your database
-                        Map<String, Object> locationUpdates = new HashMap<>();
-                        // locationUpdates.put("prof_location", new GeoLocation(location.getLatitude(), location.getLongitude()));
-
-                        FirebaseFirestore db = FirebaseFirestore.getInstance();
-                        CollectionReference classesRef = db.collection("Classes");
-                        classesRef.whereEqualTo("course_name", course.getCourseName())
-                                .get()
-                                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                                    @Override
-                                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                                        if (task.isSuccessful()) {
-                                            for (QueryDocumentSnapshot document : task.getResult()) {
-                                                // Access the document ID
-                                                String documentId = document.getId();
-
-                                                // Convert the Java Location to a GeoPoint
-                                                GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-
-                                                // Update the prof_location field in the Firestore document
-                                                Map<String, Object> updates = new HashMap<>();
-                                                updates.put("prof_location", geoPoint);
-
-                                                classesRef.document(documentId)
-                                                        .update(updates)
-                                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                            @Override
-                                                            public void onSuccess(Void aVoid) {
-                                                                Log.i("Firestore", "Prof location updated successfully for course: " + course.getCourseName());
-                                                                // Stop listening for location updates as we only want it once
-                                                                locationManager.removeUpdates(locationListener);
-                                                                // change icon to check mark
-                                                                adapter.changeAttendanceButtonToCheckMark(course);
-                                                                Toast.makeText(getApplicationContext(), "Location taken! Attendance is open", Toast.LENGTH_SHORT).show();
-                                                            }
-                                                        })
-                                                        .addOnFailureListener(new OnFailureListener() {
-                                                            @Override
-                                                            public void onFailure(@NonNull Exception e) {
-                                                                Log.e("Firestore", "Error updating prof location", e);
-                                                            }
-                                                        });
-                                            }
-                                        } else {
-                                            Log.e("Firestore", "Error getting documents: ", task.getException());
-                                        }
-                                    }
-                                });
                     }
                 }
             }
         }
+    }
+
+    private void updateProfLocationInFireBase(Course course, Location location)
+    {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.whereEqualTo("course_name", course.getCourseName())
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                // Access the document ID
+                                String documentId = document.getId();
+
+                                // Convert the Java Location to a GeoPoint
+                                GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+
+                                // Update the prof_location field in the Firestore document
+                                Map<String, Object> updates = new HashMap<>();
+                                updates.put("prof_location", geoPoint);
+
+                                classesRef.document(documentId)
+                                        .update(updates)
+                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                            @Override
+                                            public void onSuccess(Void aVoid) {
+                                                Log.i("Firestore", "Prof location updated successfully for course: " + course.getCourseName());
+                                                // Stop listening for location updates as we only want it once
+                                                locationManager.removeUpdates(locationListener);
+                                                // change icon to check mark
+                                                Log.i("INFO", "location: " + location.getLatitude() + ", " + location.getLongitude());
+                                                if (location.getLatitude() == 0 && location.getLongitude() == 0)
+                                                {
+                                                    adapter.changeAttendanceButtonToAttendance(course);
+                                                    Toast.makeText(getApplicationContext(), "Attendance successfully closed", Toast.LENGTH_SHORT).show();
+                                                } else {
+                                                    adapter.changeAttendanceButtonToCheckMark(course);
+                                                    Toast.makeText(getApplicationContext(), "Attendance is open!", Toast.LENGTH_SHORT).show();
+                                                }
+
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Log.e("Firestore", "Error updating prof location", e);
+                                            }
+                                        });
+                            }
+                        } else {
+                            Log.e("Firestore", "Error getting documents: ", task.getException());
+                        }
+                    }
+                });
     }
 
     @Override
@@ -485,12 +492,6 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
     private void updateLocationInfo(Location location) {
         Log.i("LocationInfo", location.toString());
 
-        /*
-        TextView latitudeTextView = (TextView) findViewById(R.id.latitudeTextView);
-        TextView longitudeTextView = (TextView) findViewById(R.id.longitudeTextView);
-        TextView altitudeTextView = (TextView) findViewById(R.id.altitudeTextView);
-        TextView accuracyTextView = (TextView) findViewById(R.id.accuracyTextView);
-         */
         String latitude = String.valueOf(location.getLatitude());
         String longitude = String.valueOf(location.getLongitude());
         String accuracy = String.valueOf(location.getAccuracy());
@@ -551,50 +552,11 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     private void closeAttendance(Course course) {
         Log.i("INFO", "closeAttendance() called");
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        CollectionReference classesRef = db.collection("Classes");
-        classesRef.whereEqualTo("course_name", course.getCourseName())
-                .get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        if (task.isSuccessful()) {
-                            for (QueryDocumentSnapshot document : task.getResult()) {
-                                // Access the document ID
-                                String documentId = document.getId();
+        Location loc = new Location("");
+        loc.setLatitude(0.0);
+        loc.setLongitude(0.0);
 
-                                // Convert the Java Location to a GeoPoint
-                                GeoPoint geoPoint = new GeoPoint(0, 0);
-
-                                // Update the prof_location field in the Firestore document
-                                Map<String, Object> updates = new HashMap<>();
-                                updates.put("prof_location", geoPoint);
-
-                                classesRef.document(documentId)
-                                        .update(updates)
-                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                            @Override
-                                            public void onSuccess(Void aVoid) {
-                                                Log.i("Firestore", "Prof location updated successfully for course: " + course.getCourseName());
-                                                // Stop listening for location updates as we only want it once
-                                                locationManager.removeUpdates(locationListener);
-                                                // change icon to check mark
-                                                adapter.changeAttendanceButtonToAttendance(course);
-                                                Toast.makeText(getApplicationContext(), "Attendance successfully closed", Toast.LENGTH_SHORT).show();
-                                            }
-                                        })
-                                        .addOnFailureListener(new OnFailureListener() {
-                                            @Override
-                                            public void onFailure(@NonNull Exception e) {
-                                                Log.e("Firestore", "Error updating prof location", e);
-                                            }
-                                        });
-                            }
-                        } else {
-                            Log.e("Firestore", "Error getting documents: ", task.getException());
-                        }
-                    }
-                });
+        updateProfLocationInFireBase(course, loc);
         locationObtained = false;
     }
 }

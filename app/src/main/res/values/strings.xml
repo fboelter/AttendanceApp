@@ -5,6 +5,8 @@
     <string name="courses_today">Courses Today</string>
     <string name="all_courses">All Courses</string>
     <string name="gradebook">Gradebook</string>
+
+    <string name="absent"</string>
     <string name="title_activity_student_grade_book">StudentGradeBook</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>

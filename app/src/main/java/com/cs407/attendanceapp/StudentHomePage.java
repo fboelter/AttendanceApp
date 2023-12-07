@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -97,7 +96,9 @@ public class StudentHomePage extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         listViewAll.setOnItemClickListener((parent, view, position, id) -> {
             Course selectedCourse = classListAll.get(position);
+          
             Intent intent = new Intent(StudentHomePage.this, StudentGradeBook.class);
+
             intent.putExtra("classDocumentId", selectedCourse.getId());
             intent.putExtra("userEmail", currentUser.getEmail().toLowerCase());
             startActivity(intent);

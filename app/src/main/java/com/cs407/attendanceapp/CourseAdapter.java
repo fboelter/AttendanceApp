@@ -1,6 +1,8 @@
 package com.cs407.attendanceapp;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,10 +20,14 @@ import java.util.List;
 public class CourseAdapter extends ArrayAdapter<Course> {
 
     private OnCourseClickListener listener;
+    List<Course> classList;
+    View classesTodayConvertView;
+    ViewGroup classesTodayParent;
 
     public CourseAdapter(Context context, List<Course> classList, OnCourseClickListener clickListener) {
         super(context, 0, classList);
         this.listener = clickListener;
+        this.classList = classList;
     }
 
     @NonNull
@@ -59,6 +65,8 @@ public class CourseAdapter extends ArrayAdapter<Course> {
                         }
                     }
                 });
+                this.classesTodayConvertView = convertView;
+                this.classesTodayParent = parent;
             } else {
                 attendanceButton.setVisibility(View.GONE);
             }
@@ -67,6 +75,39 @@ public class CourseAdapter extends ArrayAdapter<Course> {
         return convertView;
     }
 
+    public void changeAttendanceButtonToCheckMark(Course course) {
+        int position = classList.indexOf(course);
+        if (position != -1) {
+            if (this.classesTodayConvertView != null) {
+                View view = getView(position, this.classesTodayConvertView, this.classesTodayParent);  // Get the view for the specified position
+
+                if (view != null) {
+                    // Update the attendanceButton with the new icon
+                    ImageButton attendanceButton = view.findViewById(R.id.attendanceButton);
+                    int tint = Color.parseColor("#363537");
+                    attendanceButton.setBackgroundTintList(ColorStateList.valueOf(tint));
+                    attendanceButton.setImageResource(R.drawable.checkmark);
+                }
+            }
+        }
+    }
+
+    public void changeAttendanceButtonToAttendance(Course course) {
+        int position = classList.indexOf(course);
+        if (position != -1) {
+            if (this.classesTodayConvertView != null) {
+                View view = getView(position, this.classesTodayConvertView, this.classesTodayParent);  // Get the view for the specified position
+
+                if (view != null) {
+                    // Update the attendanceButton with the new icon
+                    ImageButton attendanceButton = view.findViewById(R.id.attendanceButton);
+                    int tint = Color.parseColor("#A61A1A");
+                    attendanceButton.setBackgroundTintList(ColorStateList.valueOf(tint));
+                    attendanceButton.setImageResource(android.R.drawable.ic_menu_my_calendar);
+                }
+            }
+        }
+    }
 
     public interface OnCourseClickListener {
         void onCourseClick(Course course);

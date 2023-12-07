@@ -390,7 +390,12 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     @Override
     public void onCourseClick(Course course) {
-        listenForLocation(course);
+        if (!locationObtained) {
+            listenForLocation(course);
+        } else {
+            showCloseAttendanceDialog(course);
+        }
+
     }
 
     // TODO: Close attendance when class ends
@@ -440,6 +445,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                                                                 // Stop listening for location updates as we only want it once
                                                                 locationManager.removeUpdates(locationListener);
                                                                 // change icon to check mark
+                                                                adapter.changeAttendanceButtonToCheckMark(course);
                                                                 Toast.makeText(getApplicationContext(), "Location taken! Attendance is open", Toast.LENGTH_SHORT).show();
                                                             }
                                                         })
@@ -521,5 +527,74 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void showCloseAttendanceDialog(Course course) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Are you sure you want to close attendance?")
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // Handle "Yes" button click
+                        closeAttendance(course);
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // Handle "No" button click
+                        // Do nothing or add any specific behavior
+                    }
+                })
+                .show();
+    }
+
+    private void closeAttendance(Course course) {
+        Log.i("INFO", "closeAttendance() called");
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.whereEqualTo("course_name", course.getCourseName())
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                // Access the document ID
+                                String documentId = document.getId();
+
+                                // Convert the Java Location to a GeoPoint
+                                GeoPoint geoPoint = new GeoPoint(0, 0);
+
+                                // Update the prof_location field in the Firestore document
+                                Map<String, Object> updates = new HashMap<>();
+                                updates.put("prof_location", geoPoint);
+
+                                classesRef.document(documentId)
+                                        .update(updates)
+                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                            @Override
+                                            public void onSuccess(Void aVoid) {
+                                                Log.i("Firestore", "Prof location updated successfully for course: " + course.getCourseName());
+                                                // Stop listening for location updates as we only want it once
+                                                locationManager.removeUpdates(locationListener);
+                                                // change icon to check mark
+                                                adapter.changeAttendanceButtonToAttendance(course);
+                                                Toast.makeText(getApplicationContext(), "Attendance successfully closed", Toast.LENGTH_SHORT).show();
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Log.e("Firestore", "Error updating prof location", e);
+                                            }
+                                        });
+                            }
+                        } else {
+                            Log.e("Firestore", "Error getting documents: ", task.getException());
+                        }
+                    }
+                });
+        locationObtained = false;
     }
 }

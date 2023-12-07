@@ -99,7 +99,7 @@ public class CourseDetails extends AppCompatActivity {
         seeGradebook.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(CourseDetails.this, gradebookPage.class);
+                Intent intent = new Intent(CourseDetails.this, ProfGradebookPage.class);
                 intent.putExtra("classDocumentId", classId);
                 startActivity(intent);
             }

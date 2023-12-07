@@ -1,20 +1,17 @@
 package com.cs407.attendanceapp;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MenuInflater;
@@ -39,7 +36,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-public class gradebookPage extends AppCompatActivity {
+public class ProfGradebookPage extends AppCompatActivity {
     FirebaseFirestore db = FirebaseFirestore.getInstance();
     String classDocumentId;
     private static final int PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 1;
@@ -93,7 +90,7 @@ public class gradebookPage extends AppCompatActivity {
                         shareCsvFile(csvFile);
                     }
                 })
-                .addOnFailureListener(e -> Toast.makeText(gradebookPage.this, "Error fetching data", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(ProfGradebookPage.this, "Error fetching data", Toast.LENGTH_SHORT).show());
     }
 
     private String toCsv(List<DocumentSnapshot> documents) {
@@ -145,14 +142,14 @@ public class gradebookPage extends AppCompatActivity {
                     LinearLayout studentListContainer = findViewById(R.id.studentListContainer);
                     studentListContainer.removeAllViews(); // Clear previous views if any
                     for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
-                        String email = document.getId();
+                        String studentId = document.getId();
                         Number gradeNumber = document.getDouble("grade"); // Try to get the grade as a Double
                         if (gradeNumber == null) {
                             gradeNumber = document.getLong("grade"); // If Double is null, try Long
                         }
 
                         double grade = gradeNumber != null ? gradeNumber.doubleValue() : 0.0; // Convert to double or default to 0.0
-                        addStudentView(studentListContainer, email, grade);
+                        addStudentView(studentListContainer, studentId, grade);
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -160,7 +157,7 @@ public class gradebookPage extends AppCompatActivity {
                 });
     }
 
-    private void addStudentView(LinearLayout container, String email, double grade) {
+    private void addStudentView(LinearLayout container, String studentId, double grade) {
         // Create a new horizontal LinearLayout for each item
         LinearLayout itemLayout = new LinearLayout(this);
         itemLayout.setLayoutParams(new LinearLayout.LayoutParams(
@@ -173,15 +170,13 @@ public class gradebookPage extends AppCompatActivity {
         emailView.setLayoutParams(new LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
-        emailView.setText(email);
+        emailView.setText(studentId);
         emailView.setTextSize(18); // Set your desired size
         emailView.setTypeface(null, Typeface.BOLD);
         emailView.setGravity(Gravity.START);
 
         TextView gradeView = new TextView(this);
-        gradeView.setLayoutParams(new LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+        gradeView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
         gradeView.setText(String.format(Locale.getDefault(), "%.2f%%", grade * 100));
         gradeView.setTextSize(18); // Set your desired size
         gradeView.setTypeface(null, Typeface.BOLD);
@@ -191,6 +186,16 @@ public class gradebookPage extends AppCompatActivity {
         itemLayout.addView(gradeView);
 
         container.addView(itemLayout);
+
+        itemLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(ProfGradebookPage.this, GradeReviewPage.class);
+                intent.putExtra("studentId", studentId);
+                intent.putExtra("classDocumentId", classDocumentId);
+                startActivity(intent);
+            }
+        });
     }
 
     private void showProfilePopupMenu(View view) {
@@ -202,7 +207,7 @@ public class gradebookPage extends AppCompatActivity {
             public boolean onMenuItemClick(MenuItem item) {
                 if (item.getItemId() == R.id.action_signout) {
                     FirebaseAuth.getInstance().signOut();
-                    Intent intent = new Intent(gradebookPage.this, LoginPage.class);
+                    Intent intent = new Intent(ProfGradebookPage.this, LoginPage.class);
                     startActivity(intent);
                     finish();
                     return true;

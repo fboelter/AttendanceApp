@@ -5,4 +5,5 @@
     <string name="courses_today">Courses Today</string>
     <string name="all_courses">All Courses</string>
     <string name="gradebook">Gradebook</string>
+    <string name="absent" />
 </resources>

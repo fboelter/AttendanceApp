@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -96,7 +95,7 @@ public class StudentHomePage extends AppCompatActivity {
     private void setupListViewItemClickListener() {
         listViewAll.setOnItemClickListener((parent, view, position, id) -> {
             Course selectedCourse = classListAll.get(position);
-            Intent intent = new Intent(StudentHomePage.this, gradebookPage.class);
+            Intent intent = new Intent(StudentHomePage.this, ProfGradebookPage.class);
             intent.putExtra("classDocumentId", selectedCourse.getId());
             startActivity(intent);
         });

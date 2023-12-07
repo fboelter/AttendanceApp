@@ -182,13 +182,12 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
 
                                                     // Check if the class is scheduled for the current day
                                                     if (course.isCourseScheduledToday()) {
-                                                            classList.add(course));
+                                                            classList.add(course);
                                                             adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
                                                         }
                                                 }
                                               }
                                             }
-                                        }
                                     });
                         }
                     } else {
@@ -341,7 +340,24 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
                                     professorLocation.setLatitude(latitude);
                                     professorLocation.setLongitude(longitude);
 
-                                    double rangeInMeters = document.getDouble("location_range");
+                                    double rangeInMeters;
+
+                                    try {
+                                        // Try to retrieve the value from the document
+                                        Double rangeFromDocument = document.getDouble("location_range");
+
+                                        // Check if the value is not null
+                                        if (rangeFromDocument != null) {
+                                            rangeInMeters = rangeFromDocument;
+                                        } else {
+                                            // If the value is null, set a default value of 10
+                                            rangeInMeters = 10;
+                                        }
+                                    } catch (NullPointerException npe) {
+                                        // Handle any potential NullPointerException
+                                        npe.printStackTrace();
+                                        rangeInMeters = 10; // Set a default value if an exception occurs
+                                    }
 
                                     float distance = studentLocation.distanceTo(professorLocation);
                                     Log.i("INFO", "Distance: " + distance);

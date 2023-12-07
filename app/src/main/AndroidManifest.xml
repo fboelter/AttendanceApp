@@ -19,6 +19,16 @@
         <activity
             android:name="com.cs407.attendanceapp.GradeReviewPage"
             android:exported="false" />
+        <activity
+            android:name=".StudentGradeBook"
+            android:exported="false"
+            android:label="@string/title_activity_student_grade_book"
+            android:theme="@style/Theme.AttendanceApp2" />
+        <activity
+            android:name="com.cs407.attendanceapp.StudentGradeBook"
+            android:exported="false"
+            android:label="@string/title_activity_student_grade_book"
+            android:theme="@style/Theme.AttendanceApp2" />
         <activity android:name="com.cs407.attendanceapp.CourseDetails" />
         <activity
             android:name="com.cs407.attendanceapp.ProfGradebookPage"

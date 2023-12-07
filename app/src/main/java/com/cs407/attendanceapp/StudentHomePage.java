@@ -93,10 +93,14 @@ public class StudentHomePage extends AppCompatActivity {
     }
 
     private void setupListViewItemClickListener() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
         listViewAll.setOnItemClickListener((parent, view, position, id) -> {
             Course selectedCourse = classListAll.get(position);
-            Intent intent = new Intent(StudentHomePage.this, ProfGradebookPage.class);
+          
+            Intent intent = new Intent(StudentHomePage.this, StudentGradeBook.class);
+
             intent.putExtra("classDocumentId", selectedCourse.getId());
+            intent.putExtra("userEmail", currentUser.getEmail().toLowerCase());
             startActivity(intent);
         });
     }
@@ -118,41 +122,36 @@ public class StudentHomePage extends AppCompatActivity {
                             String classDocumentId = classDocument.getId();
                             String className = classDocument.getString("course_name");
                             List<String> daysOfWeek = (List<String>) classDocument.get("days_of_week");
+                            Log.d("DAYS OF WEEK", daysOfWeek.toString());
                             Timestamp timeStart = classDocument.getTimestamp("time_start");
                             Timestamp timeEnd = classDocument.getTimestamp("time_end");
                             String startTime = formatTime(timeStart);
                             String endTime = formatTime(timeEnd);
                             String timeRange = startTime + " - " + endTime;
 
-                            List<String> studentEmails = null;
-                            Object studentEmailsObject = classDocument.get("student_emails");
-                            if (classDocument.exists() && className != null && studentEmailsObject != null)
-                            {
-                                try {
-                                    Log.i("INFO", "Attempting to cast " + className + " studentEmailsObject to List<String>");
-                                    studentEmails = (List<String>) studentEmailsObject;
-                                    Log.i("INFO", "Cast of " + className + "studentEmailsObject to List<String>: " + studentEmails);
-                                } catch (Exception e){
-                                    Log.e("ERROR", "Error with studentEmails: " + e.getMessage());
-                                    studentEmails = new ArrayList<String>();
-                                    studentEmails.add(userEmail);
-                                }
-                            }
+                            List<String> studentEmails = new ArrayList<>();
+                            classDocument.getReference().collection("Students").get()
+                                    .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                        @Override
+                                        public void onComplete(@NonNull Task<QuerySnapshot> studentTask) {
+                                            if (studentTask.isSuccessful()) {
+                                                for (QueryDocumentSnapshot studentDocument : studentTask.getResult()) {
+                                                    studentEmails.add(studentDocument.getId());
+                                                }
+                                                Course course = new Course(className, timeRange, classDocumentId);
+                                                if (studentEmails.contains(userEmail)) {
+                                                    classListAll.add(course);
 
-                            // Check if the user is enrolled in this class
-                            if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                Log.i("INFO", "Should add className " + className + " to screen");
-                                classListAll.add(new Course(className, timeRange, classDocumentId));
-                                adapter_all.notifyDataSetChanged();
-                            }
+                                                    if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
+                                                        classList.add(course);
+                                                        adapter.notifyDataSetChanged();
+                                                    }
+                                                    adapter_all.notifyDataSetChanged();
+                                                }
+                                            }
+                                        }
+                                    });
 
-                            // Check if the class is scheduled for the current day
-                            if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
-                                if (studentEmails != null && studentEmails.contains(userEmail)) {
-                                    classList.add(new Course(className, timeRange, classDocumentId));
-                                    adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
-                                }
-                            }
                         }
                     } else {
                         // Handle errors

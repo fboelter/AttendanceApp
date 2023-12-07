@@ -279,9 +279,10 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                 // Add location range in meters
                 EditText locationRangeInput = dialogView.findViewById(R.id.locationRangeInput);
                 String locationRangeText = locationRangeInput.getText().toString();
+                double locationRange = -1;
 
                 try {
-                    double locationRange = Double.parseDouble(locationRangeText);
+                    locationRange = Double.parseDouble(locationRangeText);
                 } catch (NumberFormatException e) {
                     e.printStackTrace();
                 }
@@ -294,6 +295,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                 classData.put("time_start", timestampStart);
                 classData.put("time_end", timestampEnd);
                 classData.put("professor", userEmail);
+                classData.put("location_range", locationRange);
 
                 // Connect with firestore
                 FirebaseFirestore db = FirebaseFirestore.getInstance();

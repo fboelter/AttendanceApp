@@ -343,8 +343,7 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
                                     professorLocation.setLatitude(latitude);
                                     professorLocation.setLongitude(longitude);
 
-                                    // double rangeInMeters = document.getDouble("attendance_range");
-                                    double rangeInMeters = 10.0; // TODO: Could make this a field professors could select e.g document.getDouble("attendance_range");
+                                    double rangeInMeters = document.getDouble("location_range");
 
                                     float distance = studentLocation.distanceTo(professorLocation);
                                     Log.i("INFO", "Distance: " + distance);

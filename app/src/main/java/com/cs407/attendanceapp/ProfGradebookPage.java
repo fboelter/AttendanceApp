@@ -39,7 +39,6 @@ import java.util.Locale;
 public class ProfGradebookPage extends AppCompatActivity {
     FirebaseFirestore db = FirebaseFirestore.getInstance();
     String classDocumentId;
-    private static final int PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,34 +49,16 @@ public class ProfGradebookPage extends AppCompatActivity {
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
 
         classDocumentId = getIntent().getStringExtra("classDocumentId");
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
-        }
 
         ImageButton download = findViewById(R.id.downloadButton);
-        download.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                fetchAndShareGradebook();
-            }
-        });
+        download.setOnClickListener(v -> fetchAndShareGradebook());
 
         // Display grade list view
         fetchAndDisplayStudents();
     }
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-            } else {
-                // Permission denied
-                Toast.makeText(this, "Permission denied to write to storage", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
     private void fetchAndShareGradebook() {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         db.collection("Classes")
                 .document(classDocumentId) // Replace with your class document ID
@@ -99,8 +80,8 @@ public class ProfGradebookPage extends AppCompatActivity {
         for (DocumentSnapshot document : documents) {
             String email = document.getId(); // Assuming the ID is the email
             Double attendanceDouble = document.getDouble("grade");
-            float attendance = attendanceDouble != null ? attendanceDouble.floatValue() : 0.0f; // Handle null
-            csvBuilder.append(email).append(", ").append(attendance).append("\n");
+            float attendance = attendanceDouble != null ? attendanceDouble.floatValue() * 100 : 0.0f; // Handle null
+            csvBuilder.append(email).append(", ").append(String.format("%.2f%%", attendance)).append("\n");
         }
         return csvBuilder.toString();
     }
@@ -108,7 +89,7 @@ public class ProfGradebookPage extends AppCompatActivity {
     private File createCsvFile(String csvData) {
         File file = null;
         try {
-            file = new File(Environment.getExternalStorageDirectory(), "attendance.csv");
+            file = new File(getExternalFilesDir(null), "attendance.csv");
             if (!file.exists()) {
                 file.createNewFile();
             }
@@ -122,7 +103,6 @@ public class ProfGradebookPage extends AppCompatActivity {
         }
         return file;
     }
-
 
     private void shareCsvFile(File file) {
         Intent intent = new Intent(Intent.ACTION_SEND);

@@ -35,15 +35,19 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.cs407.attendanceapp2.R;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -66,6 +70,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
     private CourseAdapter adapter_all;
     LocationManager locationManager;
     LocationListener locationListener;
+    boolean locationObtained = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,7 +138,6 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             String userEmail = currentUser.getEmail();
-            Date currentDate = Calendar.getInstance().getTime();
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             CollectionReference classesRef = db.collection("Classes");
 
@@ -191,11 +195,6 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
         });
 
         popupMenu.show();
-    }
-
-    private String getDayOfWeek(int dayOfWeek) {
-        String[] days = new String[]{"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-        return days[dayOfWeek];
     }
 
     private Date formatDate(Timestamp timestamp) {
@@ -391,20 +390,73 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     @Override
     public void onCourseClick(Course course) {
-        listenForLocation();
+        listenForLocation(course);
     }
 
-    private void listenForLocation()
-    {
-        if (Build.VERSION.SDK_INT < 23) {
-            startListening();
-        } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+    // TODO: Close attendance when class ends
+    private void listenForLocation(Course course) {
+        if (!locationObtained) {
+            if (Build.VERSION.SDK_INT < 23) {
+                startListening();
             } else {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-                Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                if (location != null) updateLocationInfo(location);
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                } else {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                    Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if (location != null) {
+                        updateLocationInfo(location);
+                        locationObtained = true; // Set the flag to true after obtaining the location
+
+                        // Assuming you have a "prof_location" field in your database
+                        Map<String, Object> locationUpdates = new HashMap<>();
+                        // locationUpdates.put("prof_location", new GeoLocation(location.getLatitude(), location.getLongitude()));
+
+                        FirebaseFirestore db = FirebaseFirestore.getInstance();
+                        CollectionReference classesRef = db.collection("Classes");
+                        classesRef.whereEqualTo("course_name", course.getCourseName())
+                                .get()
+                                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                        if (task.isSuccessful()) {
+                                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                                // Access the document ID
+                                                String documentId = document.getId();
+
+                                                // Convert the Java Location to a GeoPoint
+                                                GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+
+                                                // Update the prof_location field in the Firestore document
+                                                Map<String, Object> updates = new HashMap<>();
+                                                updates.put("prof_location", geoPoint);
+
+                                                classesRef.document(documentId)
+                                                        .update(updates)
+                                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                            @Override
+                                                            public void onSuccess(Void aVoid) {
+                                                                Log.i("Firestore", "Prof location updated successfully for course: " + course.getCourseName());
+                                                                // Stop listening for location updates as we only want it once
+                                                                locationManager.removeUpdates(locationListener);
+                                                                // change icon to check mark
+                                                                Toast.makeText(getApplicationContext(), "Location taken! Attendance is open", Toast.LENGTH_SHORT).show();
+                                                            }
+                                                        })
+                                                        .addOnFailureListener(new OnFailureListener() {
+                                                            @Override
+                                                            public void onFailure(@NonNull Exception e) {
+                                                                Log.e("Firestore", "Error updating prof location", e);
+                                                            }
+                                                        });
+                                            }
+                                        } else {
+                                            Log.e("Firestore", "Error getting documents: ", task.getException());
+                                        }
+                                    }
+                                });
+                    }
+                }
             }
         }
     }

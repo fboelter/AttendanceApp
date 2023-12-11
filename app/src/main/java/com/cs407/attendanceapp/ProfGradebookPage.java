@@ -119,7 +119,7 @@ public class ProfGradebookPage extends AppCompatActivity {
                     List<GradeItem> gradeItems = new ArrayList<>();
                     for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
                         String studentId = document.getId();
-                        double grade = document.getDouble("grade") != null ? document.getDouble("grade") : 0.0;
+                        double grade = document.getDouble("grade") != null ? document.getDouble("grade") * 100 : 0.0;
                         gradeItems.add(new GradeItem(studentId, grade));
                     }
                     GradesAdapter adapter = new GradesAdapter(ProfGradebookPage.this, gradeItems);

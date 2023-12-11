@@ -1,48 +1,55 @@
 package com.cs407.attendanceapp;
 
+import android.Manifest;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.PopupMenu;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import com.cs407.attendanceapp2.R;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
-
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.util.Log;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.DatePicker;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.PopupMenu;
-import android.widget.Toast;
-
-import androidx.appcompat.widget.Toolbar;
-import com.cs407.attendanceapp2.R;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -52,7 +59,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class ProfessorHomePage extends AppCompatActivity {
+public class ProfessorHomePage extends AppCompatActivity implements CourseAdapter.OnCourseClickListener {
 
     private FirebaseAuth mAuth;
     private ListView listView;
@@ -61,22 +68,48 @@ public class ProfessorHomePage extends AppCompatActivity {
     private List<Course> classListAll;
     private CourseAdapter adapter;
     private CourseAdapter adapter_all;
+    LocationManager locationManager;
+    LocationListener locationListener;
+    boolean locationObtained = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_professor_home_page);
+        setContentView(R.layout.sample);
 
         initializeUIComponents();
         initializeListView();
         setupListViewItemClickListener();
         fetchAndDisplayCourses();
+
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        locationListener = new LocationListener() {
+
+            @Override
+            public void onLocationChanged(@NonNull Location location) {
+                updateLocationInfo(location);
+            }
+
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+            @Override
+            public void onProviderEnabled(String s){
+
+            }
+            @Override
+            public void onProviderDisabled(String s){
+
+            }
+        };
+
     }
 
     private void initializeUIComponents() {
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
-        Button addClassButton = findViewById(R.id.plusButton);
+        ImageButton addClassButton = findViewById(R.id.plusButton);
         addClassButton.setOnClickListener(v -> showAddCourseDialog());
         mAuth = FirebaseAuth.getInstance();
     }
@@ -86,8 +119,8 @@ public class ProfessorHomePage extends AppCompatActivity {
         listViewAll = findViewById(R.id.class_list_all);
         classList = new ArrayList<>();
         classListAll = new ArrayList<>();
-        adapter = new CourseAdapter(this, classList);
-        adapter_all = new CourseAdapter(this, classListAll);
+        adapter = new CourseAdapter(this, classList, this::onCourseClick);
+        adapter_all = new CourseAdapter(this, classListAll, this::onCourseClick);
         listView.setAdapter(adapter);
         listViewAll.setAdapter(adapter_all);
     }
@@ -105,7 +138,6 @@ public class ProfessorHomePage extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             String userEmail = currentUser.getEmail();
-            Date currentDate = Calendar.getInstance().getTime();
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             CollectionReference classesRef = db.collection("Classes");
 
@@ -118,14 +150,18 @@ public class ProfessorHomePage extends AppCompatActivity {
                                 String className = classDocument.getString("course_name");
                                 Timestamp timeStart = classDocument.getTimestamp("time_start");
                                 Timestamp timeEnd = classDocument.getTimestamp("time_end");
+                                Log.i("INFO", "timeEnd Timestamp: " + timeEnd);
                                 String startTime = formatTime(timeStart);
                                 String endTime = formatTime(timeEnd);
                                 String timeRange = startTime + " - " + endTime;
+                                Date startDate = formatDate(timeStart);
+                                Date endDate = formatDate(timeEnd);
+                                Log.i("INFO", "timeRange in professor course creation: " + timeRange);
                                 List<String> daysOfWeek = (List<String>) classDocument.get("days_of_week");
 
-                                Course course = new Course(className, timeRange, classDocumentId);
+                                Course course = new Course(className, timeRange, classDocumentId, daysOfWeek, startDate, endDate);
                                 classListAll.add(course);
-                                if (isCourseScheduledToday(currentDate, daysOfWeek, timeStart, timeEnd)) {
+                                if (course.isCourseScheduledToday()) {
                                     classList.add(course);
                                 }
                             }
@@ -161,25 +197,8 @@ public class ProfessorHomePage extends AppCompatActivity {
         popupMenu.show();
     }
 
-    private boolean isCourseScheduledToday(Date currentDate, List<String> daysOfWeek, Timestamp timeStart, Timestamp timeEnd) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(currentDate);
-        int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
-        String currentDay = getDayOfWeek(currentDayOfWeek);
-
-        if (daysOfWeek != null && daysOfWeek.contains(currentDay)) {
-            Date startTime = timeStart.toDate();
-            Date endTime = timeEnd.toDate();
-
-            return currentDate.after(startTime) && currentDate.before(endTime);
-        }
-
-        return false;
-    }
-
-    private String getDayOfWeek(int dayOfWeek) {
-        String[] days = new String[]{"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-        return days[dayOfWeek];
+    private Date formatDate(Timestamp timestamp) {
+        return timestamp.toDate();
     }
 
     private String formatTime(Timestamp timestamp) {
@@ -220,9 +239,6 @@ public class ProfessorHomePage extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         String userEmail = currentUser.getEmail();
 
-
-
-
         EditText courseNameEditText = dialogView.findViewById(R.id.editTextCourseName);
         // Set up checkboxes or toggle buttons for days of the week
         // Set up date pickers for start and end date
@@ -260,6 +276,18 @@ public class ProfessorHomePage extends AppCompatActivity {
                 Timestamp timestampStart = new Timestamp(startDateCalendar.getTime());
                 Timestamp timestampEnd = new Timestamp(endDateCalendar.getTime());
 
+                // Add location range in meters
+                EditText locationRangeInput = dialogView.findViewById(R.id.locationRangeInput);
+                String locationRangeText = locationRangeInput.getText().toString();
+                double locationRange = -1;
+
+                try {
+                    locationRange = Double.parseDouble(locationRangeText);
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                }
+
+
                 // Put data into an object
                 Map<String, Object> classData = new HashMap<>();
                 classData.put("course_name", courseName);
@@ -267,6 +295,7 @@ public class ProfessorHomePage extends AppCompatActivity {
                 classData.put("time_start", timestampStart);
                 classData.put("time_end", timestampEnd);
                 classData.put("professor", userEmail);
+                classData.put("location_range", locationRange);
 
                 // Connect with firestore
                 FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -370,5 +399,177 @@ public class ProfessorHomePage extends AppCompatActivity {
             case 3:  return "rd";
             default: return "th";
         }
+    }
+
+    @Override
+    public void onCourseClick(Course course) {
+        if (!locationObtained) {
+            listenForLocation(course);
+        } else {
+            showCloseAttendanceDialog(course);
+        }
+
+    }
+
+    private void listenForLocation(Course course) {
+        if (!locationObtained) {
+            if (Build.VERSION.SDK_INT < 23) {
+                startListening();
+            } else {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                } else {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                    Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if (location != null) {
+                        updateLocationInfo(location);
+                        updateProfLocationInFireBase(course, location);
+                        locationObtained = true; // Set the flag to true after obtaining the location
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateProfLocationInFireBase(Course course, Location location)
+    {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.whereEqualTo("course_name", course.getCourseName())
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                // Access the document ID
+                                String documentId = document.getId();
+
+                                // Convert the Java Location to a GeoPoint
+                                GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+
+                                // Update the prof_location field in the Firestore document
+                                Map<String, Object> updates = new HashMap<>();
+                                updates.put("prof_location", geoPoint);
+
+                                classesRef.document(documentId)
+                                        .update(updates)
+                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                            @Override
+                                            public void onSuccess(Void aVoid) {
+                                                Log.i("Firestore", "Prof location updated successfully for course: " + course.getCourseName());
+                                                // Stop listening for location updates as we only want it once
+                                                locationManager.removeUpdates(locationListener);
+                                                // change icon to check mark
+                                                Log.i("INFO", "location: " + location.getLatitude() + ", " + location.getLongitude());
+                                                if (location.getLatitude() == 0 && location.getLongitude() == 0)
+                                                {
+                                                    adapter.changeAttendanceButtonToAttendance(course);
+                                                    Toast.makeText(ProfessorHomePage.this, "Attendance successfully closed", Toast.LENGTH_SHORT).show();
+                                                } else {
+                                                    adapter.changeAttendanceButtonToCheckMark(course);
+                                                    Toast.makeText(ProfessorHomePage.this, "Attendance is open!", Toast.LENGTH_SHORT).show();
+                                                }
+
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Log.e("Firestore", "Error updating prof location", e);
+                                            }
+                                        });
+                            }
+                        } else {
+                            Log.e("Firestore", "Error getting documents: ", task.getException());
+                        }
+                    }
+                });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startListening();
+        }
+    }
+
+    private void startListening() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        }
+    }
+
+    private void updateLocationInfo(Location location) {
+        Log.i("LocationInfo", location.toString());
+
+        String latitude = String.valueOf(location.getLatitude());
+        String longitude = String.valueOf(location.getLongitude());
+        String accuracy = String.valueOf(location.getAccuracy());
+        Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
+
+        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+
+        try {
+            String address = "Could not find address";
+            List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+
+            if (listAddresses != null && listAddresses.size() > 0){
+                Log.i("PlaceInfo", listAddresses.get(0).toString());
+                address = "Address: \n";
+                if (listAddresses.get(0).getSubThoroughfare() != null) {
+                    address += listAddresses.get(0).getSubThoroughfare() + " ";
+                }
+                if (listAddresses.get(0).getThoroughfare() != null) {
+                    address += listAddresses.get(0).getThoroughfare() + " ";
+                }
+                if (listAddresses.get(0).getLocality() != null) {
+                    address += listAddresses.get(0).getLocality() + " ";
+                }
+                if (listAddresses.get(0).getPostalCode() != null) {
+                    address += listAddresses.get(0).getPostalCode() + " ";
+                }
+                if (listAddresses.get(0).getCountryName() != null) {
+                    address += listAddresses.get(0).getCountryName() + " ";
+                }
+            }
+
+            // TextView addressTextView = (TextView) findViewById(R.id.addressTextView);
+            Log.i("INFO", "Address: " + address);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showCloseAttendanceDialog(Course course) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Are you sure you want to close attendance?")
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // Handle "Yes" button click
+                        closeAttendance(course);
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // Handle "No" button click
+                        // Do nothing or add any specific behavior
+                    }
+                })
+                .show();
+    }
+
+    private void closeAttendance(Course course) {
+        Log.i("INFO", "closeAttendance() called");
+        Location loc = new Location("");
+        loc.setLatitude(0.0);
+        loc.setLongitude(0.0);
+
+        updateProfLocationInFireBase(course, loc);
+        locationObtained = false;
     }
 }

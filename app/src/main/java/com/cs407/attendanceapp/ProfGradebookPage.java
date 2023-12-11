@@ -136,7 +136,7 @@ public class ProfGradebookPage extends AppCompatActivity {
 
                 })
                 .addOnFailureListener(e -> {
-                    // Handle error
+                    Toast.makeText(ProfGradebookPage.this, "Error fetching data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 

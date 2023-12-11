@@ -1,17 +1,13 @@
 package com.cs407.attendanceapp;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MenuInflater;
@@ -20,11 +16,11 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import android.Manifest;
 import com.cs407.attendanceapp2.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -33,6 +29,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -119,63 +116,28 @@ public class ProfGradebookPage extends AppCompatActivity {
         db.collection("Classes").document(classDocumentId).collection("Students")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    LinearLayout studentListContainer = findViewById(R.id.studentListContainer);
-                    studentListContainer.removeAllViews(); // Clear previous views if any
+                    List<GradeItem> gradeItems = new ArrayList<>();
                     for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
                         String studentId = document.getId();
-                        Number gradeNumber = document.getDouble("grade"); // Try to get the grade as a Double
-                        if (gradeNumber == null) {
-                            gradeNumber = document.getLong("grade"); // If Double is null, try Long
-                        }
-
-                        double grade = gradeNumber != null ? gradeNumber.doubleValue() : 0.0; // Convert to double or default to 0.0
-                        addStudentView(studentListContainer, studentId, grade);
+                        double grade = document.getDouble("grade") != null ? document.getDouble("grade") : 0.0;
+                        gradeItems.add(new GradeItem(studentId, grade));
                     }
+                    GradesAdapter adapter = new GradesAdapter(ProfGradebookPage.this, gradeItems);
+                    ListView lvGrades = findViewById(R.id.lvGrades);
+                    lvGrades.setAdapter(adapter);
+
+                    lvGrades.setOnItemClickListener((parent, view, position, id) -> {
+                        GradeItem item = gradeItems.get(position);
+                        Intent intent = new Intent(ProfGradebookPage.this, GradeReviewPage.class);
+                        intent.putExtra("studentId", item.getStudentId());
+                        intent.putExtra("classDocumentId", classDocumentId);
+                        startActivity(intent);
+                    });
+
                 })
                 .addOnFailureListener(e -> {
                     // Handle error
                 });
-    }
-
-    private void addStudentView(LinearLayout container, String studentId, double grade) {
-        // Create a new horizontal LinearLayout for each item
-        LinearLayout itemLayout = new LinearLayout(this);
-        itemLayout.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        itemLayout.setOrientation(LinearLayout.HORIZONTAL);
-        itemLayout.setBackground(ContextCompat.getDrawable(this, R.drawable.list_item_background)); // Assuming you have list_item_background.xml
-
-        TextView emailView = new TextView(this);
-        emailView.setLayoutParams(new LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
-        emailView.setText(studentId);
-        emailView.setTextSize(18); // Set your desired size
-        emailView.setTypeface(null, Typeface.BOLD);
-        emailView.setGravity(Gravity.START);
-
-        TextView gradeView = new TextView(this);
-        gradeView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
-        gradeView.setText(String.format(Locale.getDefault(), "%.2f%%", grade * 100));
-        gradeView.setTextSize(18); // Set your desired size
-        gradeView.setTypeface(null, Typeface.BOLD);
-        gradeView.setGravity(Gravity.END);
-
-        itemLayout.addView(emailView);
-        itemLayout.addView(gradeView);
-
-        container.addView(itemLayout);
-
-        itemLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(ProfGradebookPage.this, GradeReviewPage.class);
-                intent.putExtra("studentId", studentId);
-                intent.putExtra("classDocumentId", classDocumentId);
-                startActivity(intent);
-            }
-        });
     }
 
     private void showProfilePopupMenu(View view) {

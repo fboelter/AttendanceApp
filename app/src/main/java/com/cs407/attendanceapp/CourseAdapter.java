@@ -9,7 +9,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
-import com.cs407.attendanceapp.Course;
 import com.cs407.attendanceapp2.R;
 
 import java.util.List;

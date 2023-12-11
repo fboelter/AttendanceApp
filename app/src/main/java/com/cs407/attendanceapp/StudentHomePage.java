@@ -34,6 +34,9 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -86,7 +89,10 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
 
             @Override
             public void onLocationChanged(@NonNull Location location) {
-                updateLocationInfo(location);
+                if (!markedPresent || !locationObtained)
+                {
+                    updateLocationInfo(location);
+                }
             }
 
             @Override
@@ -144,7 +150,6 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             String userEmail = currentUser.getEmail().toLowerCase();
-            Date currentDate = Calendar.getInstance().getTime();
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             CollectionReference classesRef = db.collection("Classes");
 
@@ -316,6 +321,8 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
 
     }
 
+
+
     public void takeAttendance(Course course, Location studentLocation)
     {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -365,9 +372,7 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
                                     // Check if the distance is within the specified range
                                     if (professorLocation.getLongitude() != 0.0 && professorLocation.getLongitude() != 0 && distance <= rangeInMeters) {
                                         // TODO: update student gradebook with 1 to indicate attendance
-                                        markedPresent = true;
-                                        adapter.changeAttendanceButtonToCheckMark(course);
-                                        Toast.makeText(StudentHomePage.this, "You have been marked present", Toast.LENGTH_SHORT).show();
+                                        markPresentInFirebase(course);
                                     } else {
                                         markedPresent = false;
                                         Toast.makeText(StudentHomePage.this, "Not marked present. Consider moving closer to the front of the room", Toast.LENGTH_LONG).show();
@@ -414,6 +419,82 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
         }
     }
 
+    private void markPresentInFirebase(Course course) {
+        Log.i("INFO", "Marking present in Firebase");
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        Date currentDate = Calendar.getInstance().getTime();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        final String formattedDate = dateFormat.format(currentDate);
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        String userEmail = currentUser.getEmail();
+
+        // Reference to the "Classes" collection
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.whereEqualTo("course_name", course.getCourseName())
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot classDocument : task.getResult()) {
+                                // For each matching document, check if userEmail is in "Students" collection
+                                updateStudentAttendance(classDocument.getReference(), userEmail, formattedDate, course);
+                            }
+                        } else {
+                            // Handle errors
+                        }
+                    }
+                });
+    }
+
+    private void updateStudentAttendance(final DocumentReference classDocRef, final String userEmail, final String currentDate, Course course) {
+        // Reference to the "Students" collection
+        CollectionReference studentsRef = classDocRef.collection("Students");
+        Log.i("INFO", "Students collection: " + studentsRef.getId());
+
+        DocumentReference userDocumentRef = studentsRef.document(userEmail);
+
+        userDocumentRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+
+                        // Update the array with the new value
+                        userDocumentRef.update("days_attended", FieldValue.arrayUnion(new Timestamp(Calendar.getInstance().getTime())))
+                                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                    @Override
+                                    public void onComplete(Task<Void> task) {
+                                        if (task.isSuccessful()) {
+                                            // Update successful
+                                            Log.d("Firestore", "Days attended updated successfully");
+                                            markedPresent = true;
+                                            adapter.changeAttendanceButtonToCheckMark(course);
+                                            Toast.makeText(getApplicationContext(), "You have been marked as present", Toast.LENGTH_LONG);
+                                        } else {
+                                            // Handle errors
+                                            Exception exception = task.getException();
+                                            if (exception != null) {
+                                                Log.e("Firestore", "Error updating days attended: " + exception.getMessage());
+                                            }
+                                        }
+                                    }
+                                });
+                    } else {
+                        // Handle the case where the document doesn't exist
+                    }
+                } else {
+                    // Handle errors
+                    Exception exception = task.getException();
+                    if (exception != null) {
+                        Log.e("Firestore", "Error getting document: " + exception.getMessage());
+                    }
+                }
+            }
+        });
+    }
+
     private void startListening() {
         Log.i("INFO", "Start listening. locationObtained: " + locationObtained);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -422,41 +503,43 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
     }
 
     private void updateLocationInfo(Location location) {
-        Log.i("INFO", "loctationObtained: " + locationObtained);
+        if (!locationObtained) {
+            Log.i("INFO", "loctationObtained: " + locationObtained);
 
-        String latitude = String.valueOf(location.getLatitude());
-        String longitude = String.valueOf(location.getLongitude());
-        String accuracy = String.valueOf(location.getAccuracy());
-        Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
+            String latitude = String.valueOf(location.getLatitude());
+            String longitude = String.valueOf(location.getLongitude());
+            String accuracy = String.valueOf(location.getAccuracy());
+            Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
 
-        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+            Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
 
-        try {
-            String address = "Could not find address";
-            List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+            try {
+                String address = "Could not find address";
+                List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
 
-            if (listAddresses != null && listAddresses.size() > 0){
-                Log.i("PlaceInfo", listAddresses.get(0).toString());
-                address = "Address: \n";
-                if (listAddresses.get(0).getSubThoroughfare() != null) {
-                    address += listAddresses.get(0).getSubThoroughfare() + " ";
+                if (listAddresses != null && listAddresses.size() > 0) {
+                    Log.i("PlaceInfo", listAddresses.get(0).toString());
+                    address = "Address: \n";
+                    if (listAddresses.get(0).getSubThoroughfare() != null) {
+                        address += listAddresses.get(0).getSubThoroughfare() + " ";
+                    }
+                    if (listAddresses.get(0).getThoroughfare() != null) {
+                        address += listAddresses.get(0).getThoroughfare() + " ";
+                    }
+                    if (listAddresses.get(0).getLocality() != null) {
+                        address += listAddresses.get(0).getLocality() + " ";
+                    }
+                    if (listAddresses.get(0).getPostalCode() != null) {
+                        address += listAddresses.get(0).getPostalCode() + " ";
+                    }
+                    if (listAddresses.get(0).getCountryName() != null) {
+                        address += listAddresses.get(0).getCountryName() + " ";
+                    }
                 }
-                if (listAddresses.get(0).getThoroughfare() != null) {
-                    address += listAddresses.get(0).getThoroughfare() + " ";
-                }
-                if (listAddresses.get(0).getLocality() != null) {
-                    address += listAddresses.get(0).getLocality() + " ";
-                }
-                if (listAddresses.get(0).getPostalCode() != null) {
-                    address += listAddresses.get(0).getPostalCode() + " ";
-                }
-                if (listAddresses.get(0).getCountryName() != null) {
-                    address += listAddresses.get(0).getCountryName() + " ";
-                }
+                Log.i("INFO", "Address: " + address);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            Log.i("INFO", "Address: " + address);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 }

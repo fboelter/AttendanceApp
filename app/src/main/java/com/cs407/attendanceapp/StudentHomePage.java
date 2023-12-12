@@ -1,23 +1,14 @@
 package com.cs407.attendanceapp;
 
-import android.Manifest;
 import android.Manifest.permission;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -28,34 +19,33 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.cs407.attendanceapp.CourseAdapter.OnCourseClickListener;
 import com.cs407.attendanceapp2.R;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.google.mlkit.vision.barcode.common.Barcode;
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
+import com.google.firebase.firestore.SetOptions;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-public class StudentHomePage extends AppCompatActivity implements CourseAdapter.OnCourseClickListener {
+public class StudentHomePage extends AppCompatActivity implements OnCourseClickListener {
 
     private FirebaseAuth mAuth;
     private ListView listView;
@@ -65,14 +55,14 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
     private CourseAdapter adapter;
     private CourseAdapter adapter_all;
     private ImageButton addCourseStudentButton;
-    private static final String[] REQUIRED_PERMISSIONS = {permission.CAMERA};
-    private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
+    public static final String[] REQUIRED_PERMISSIONS = {permission.CAMERA};
+    public static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private static final int ACCESS_FINE_LOCATION_REQUEST_CODE = 101;
 
-    LocationManager locationManager;
-    LocationListener locationListener;
-    boolean markedPresent;
-    boolean locationObtained = false; // TODO: update setting of locationObtained and markedPresent so that you don't have to retake attendance when you sign out
+    // LocationManager locationManager;
+    // LocationListener locationListener;
+    // boolean markedPresent;
+    // boolean locationObtained = false; // TODO: update setting of locationObtained and markedPresent so that you don't have to retake attendance when you sign out
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,13 +74,15 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
         setupAddCourseButtonListener();
         setupListViewItemClickListener();
         fetchAndDisplayCourses();
+        FirebaseApp.initializeApp(this);
 
+        /*
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationListener = new LocationListener() {
 
             @Override
             public void onLocationChanged(@NonNull Location location) {
-                if (!markedPresent || !locationObtained)
+                if (!locationObtained)
                 {
                     updateLocationInfo(location);
                 }
@@ -109,6 +101,7 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
 
             }
         };
+         */
     }
 
     private void initializeUIComponents() {
@@ -190,12 +183,12 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
 
                                                     // Check if the class is scheduled for the current day
                                                     if (course.isCourseScheduledToday()) {
-                                                            classList.add(course);
-                                                            adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
-                                                        }
+                                                        classList.add(course);
+                                                        adapter.notifyDataSetChanged(); // Notify the adapter that data has changed
+                                                    }
                                                 }
-                                              }
                                             }
+                                        }
                                     });
                         }
                     } else {
@@ -263,7 +256,7 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             handleCameraPermissionResult(grantResults);
         } else if (requestCode == ACCESS_FINE_LOCATION_REQUEST_CODE) {
-            handleLocationPermissionResult(grantResults);
+            // handleLocationPermissionResult(grantResults);
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
@@ -280,6 +273,7 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
         }
     }
 
+    /*
     private void handleLocationPermissionResult(int[] grantResults) {
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             // Location permission granted, proceed with location-related operations
@@ -289,42 +283,141 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
             Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
         }
     }
+    */
+
+    private void addCourseToStudentCourses(String classId) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.document(classId)
+                .get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        if (documentSnapshot.exists()) {
+                            // Document exists, access its fields
+                            String courseName = documentSnapshot.getString("course_name");
+
+                            Timestamp timeStart = documentSnapshot.getTimestamp("time_start");
+                            Timestamp timeEnd = documentSnapshot.getTimestamp("time_end");
+                            String startTime = formatTime(timeStart);
+                            String endTime = formatTime(timeEnd);
+                            String timeRange = startTime + " - " + endTime;
+                            Date startDate = formatDate(timeStart);
+                            Date endDate = formatDate(timeEnd);
+
+                            List<String> daysOfWeek = (List<String>) documentSnapshot.get("days_of_week");
+
+                            // Add course to student's course list
+                            Log.i("INFO", "Adding course: " + classId + " , " + courseName + ", " + timeRange);
+                            Course newCourse = new Course(courseName, timeRange, classId, daysOfWeek, startDate, endDate);
+                            classListAll.add(newCourse);
+                            adapter_all.notifyDataSetChanged();
+                            if (newCourse.isCourseScheduledToday()) {
+                                classList.add(newCourse);
+                                adapter.notifyDataSetChanged();
+                            }
+                        } else {
+                            // Document does not exist
+                            Log.d("Firestore", "Document with ID " + classId + " does not exist.");
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // Handle errors
+                        Log.e("Firestore", "Error getting document: " + e.getMessage());
+                    }
+                });
+    }
+
+    private void addStudentToFirebaseCourse(String classId) {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        String studentEmail = currentUser.getEmail();
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        CollectionReference studentsRef = classesRef.document(classId).collection("Students");
+
+        Map<String, Object> newData = new HashMap<>();
+        newData.put("days_attended", Arrays.asList());
+        newData.put("days_missed", Arrays.asList());
+        newData.put("grade", 0);
+
+        studentsRef.document(studentEmail).set(newData, SetOptions.merge())
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void unused) {
+                        Log.i("Info", "Student document set in Firebase successfully");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e("Firebase", "Student document failed to update");
+                    }
+                });
+    }
 
     private void scanBarcode() {
-        GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
+        navigateToCameraPreview();
+        /*
+        ImageView barCodeImage;
+        BitmapDrawable drawable = (BitmapDrawable) barCodeImage.getDrawable();
+        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
                 .setBarcodeFormats(
                         Barcode.FORMAT_QR_CODE,
                         Barcode.FORMAT_AZTEC)
                 .build();
-        GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(this, options);
-        scanner
-                .startScan()
-                .addOnSuccessListener(
-                        barcode -> {
-                            // Task completed successfully
-                            String rawValue = barcode.getRawValue();
-                            String classId = rawValue.toString();
-                            Log.i("INFO", "Class Id is: " + classId);
-                            FirebaseFirestore db = FirebaseFirestore.getInstance();
-                            CollectionReference classesRef = db.collection("Classes");
-                            FirebaseUser currentUser = mAuth.getCurrentUser();
-                            // classesRef.document(classId).update("student_emails", FieldValue.arrayUnion(currentUser.getEmail()));
-                            Log.i("INFO", "Update call made to Firebase with " + currentUser.getEmail());
-                        })
-                .addOnCanceledListener(
-                        () -> {
-                            Log.i("INFO", "Barcode task cancelled");
-                            // Task canceled
-                        })
-                .addOnFailureListener(
-                        e -> {
-                            Log.e("ERROR", "Barcode task failed: " + e.getMessage());
-                            // Task failed with an exception
-                        });
+        Log.i("INFO", "Barcode options set");
+        BarcodeScanner scanner = BarcodeScanning.getClient(options);
 
-    }
+        Bitmap bitmap = drawable.getBitmap();
+        InputImage image = InputImage.fromBitmap(bitmap, 90); // 90 for portrait images
 
+        // Perform the actual barcode scanning
+        scanner.process(image)
+                .addOnSuccessListener(new OnSuccessListener<List<Barcode>>() {
+                    @Override
+                    public void onSuccess(List<Barcode> barcodes) {
+                        // Process the detected barcodes
+                        for (Barcode barcode : barcodes) {
+                            // Access barcode information
+                            String value = barcode.getDisplayValue();
+                            int format = barcode.getFormat();
+                            // Handle the barcode data as needed
+                            // For example, display the barcode value in a TextView
+                            Log.i("INFO","Barcode Value: " + value);
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // Handle barcode scanning failure
+                        Log.e("BarcodeScanning", "Barcode scanning failed: " + e.getMessage());
+                    }
+                });
 
+            // Task completed successfully
+            // String rawValue = barcode.getRawValue();
+            // String classId = rawValue.toString();
+            // Log.i("INFO", "Class Id is: " + classId);
+            // addStudentToFirebaseCourse(classId);
+            // addCourseToStudentCourses(classId);
+
+            // if they both succeed, send Toast
+            // Toast.makeText(getApplicationContext(), "Course added successfully", Toast.LENGTH_SHORT);
+         */
+
+        }
+
+        @Override
+        public void onCourseClick (Course course){
+
+        }
+
+    /*
 
     public void takeAttendance(Course course, Location studentLocation)
     {
@@ -545,4 +638,12 @@ public class StudentHomePage extends AppCompatActivity implements CourseAdapter.
             }
         }
     }
+    */
+
+    private void navigateToCameraPreview() {
+        // Create an Intent to start the CameraPreviewActivity
+        Intent intent = new Intent(this, ScanBarcodeActivity.class);
+        startActivity(intent);
+    }
 }
+

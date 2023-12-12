@@ -306,10 +306,10 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
                         Course newCourse = new Course(courseName, timeRange, classId, daysOfWeek, startDate, endDate);
                         if (!classListAll.contains(newCourse)) {
                             classListAll.add(newCourse);
-                            adapter_all.notifyDataSetChanged();
+                            Log.i("INFO", "AdapterAll notified");
                         } else if (newCourse.isCourseScheduledToday() && !classList.contains(newCourse)) {
                             classList.add(newCourse);
-                            adapter.notifyDataSetChanged();
+                            Log.i("INFO", "Adapter notified");
                         }
                         Toast.makeText(StudentHomePage.this, "Class successfully added", Toast.LENGTH_SHORT).show();
                     } else {

@@ -1,21 +1,17 @@
 package com.cs407.attendanceapp;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import android.content.Intent;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -31,7 +27,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class ProfGradebookPage extends AppCompatActivity {
     FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -113,6 +108,9 @@ public class ProfGradebookPage extends AppCompatActivity {
     }
 
     private void fetchAndDisplayStudents() {
+        ImageButton downloadButton = findViewById(R.id.downloadButton);
+        TextView noGradesTextView = findViewById(R.id.tvNoGrades);
+
         db.collection("Classes").document(classDocumentId).collection("Students")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -122,6 +120,16 @@ public class ProfGradebookPage extends AppCompatActivity {
                         double grade = document.getDouble("grade") != null ? document.getDouble("grade") * 100 : 0.0;
                         gradeItems.add(new GradeItem(studentId, grade));
                     }
+
+                    if (gradeItems.isEmpty()) {
+                        downloadButton.setVisibility(View.GONE);
+                        noGradesTextView.setVisibility(View.VISIBLE);
+
+                    } else {
+                        downloadButton.setVisibility(View.VISIBLE);
+                        noGradesTextView.setVisibility(View.GONE);
+                    }
+
                     GradesAdapter adapter = new GradesAdapter(ProfGradebookPage.this, gradeItems);
                     ListView lvGrades = findViewById(R.id.lvGrades);
                     lvGrades.setAdapter(adapter);
@@ -133,7 +141,6 @@ public class ProfGradebookPage extends AppCompatActivity {
                         intent.putExtra("classDocumentId", classDocumentId);
                         startActivity(intent);
                     });
-
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(ProfGradebookPage.this, "Error fetching data: " + e.getMessage(), Toast.LENGTH_SHORT).show();

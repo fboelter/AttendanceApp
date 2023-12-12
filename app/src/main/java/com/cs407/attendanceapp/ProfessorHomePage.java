@@ -7,8 +7,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -44,12 +42,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -104,6 +102,139 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
             }
         };
 
+    }
+
+    private void checkIfAttendanceHasAlreadyBeenOpened(Course course) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.whereEqualTo("course_name", course.getCourseName())
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            // Access the GeoPoint from the Firestore document
+                            GeoPoint geoPoint = document.getGeoPoint("prof_location");
+
+                            if (geoPoint != null) {
+                                // Extract latitude and longitude
+                                double latitude = geoPoint.getLatitude();
+                                double longitude = geoPoint.getLongitude();
+                                if ((latitude != 0) && (longitude !=0))
+                                {
+                                    adapter.changeAttendanceButtonToCheckMark(course);
+                                    locationObtained = true;
+                                }
+                            }
+                        }
+                    }
+                });
+    }
+
+    private void queryForCurrentCourse(Course course) {
+        Log.i("INFO", "Prof view queryForCurrentCourse");
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            String userEmail = currentUser.getEmail();
+            // Reference to the "Classes" collection
+            CollectionReference classesRef = db.collection("Classes");
+            classesRef.whereEqualTo("course_name", course.getCourseName())
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot classDocument : task.getResult()) {
+                                // For each matching document, check if userEmail is in "Students" collection
+                                markMissingStudentsAbsentInFirebase(classDocument.getReference());
+                            }
+                        }  else {
+                            Toast.makeText(ProfessorHomePage.this, "Something went wrong when looking for current class in queryForCurrentCourse", Toast.LENGTH_LONG);
+                        }
+
+                    });
+            // Task never completed
+        }
+        else {
+            Toast.makeText(ProfessorHomePage.this, "Authentication error in queryForCurrentCourse: currentUser is null", Toast.LENGTH_LONG);
+        }
+    }
+
+    // Method to query documents where the current date is not in "days_attended"
+    private void markMissingStudentsAbsentInFirebase(final DocumentReference classDocRef) {
+        Log.i("INFO", "markMissingStudentsAbsentInFirebase");
+        CollectionReference studentsRef = classDocRef.collection("Students");
+
+        // Query to get documents where the current date is in "days_attended"
+        studentsRef.get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        QuerySnapshot allDocumentsQuerySnapshot = task.getResult();
+                        if (allDocumentsQuerySnapshot != null && !allDocumentsQuerySnapshot.isEmpty()) {
+                            // Iterate through all documents
+                            for (QueryDocumentSnapshot document : allDocumentsQuerySnapshot) {
+
+                                // Check if the current date is in "days_attended" array
+                                Log.i("INFO", "isDateInDaysAttended for " + document.getId() + ": " + isDateInDaysAttended(document));
+                                if (isDateInDaysAttended(document)) {
+                                    // do nothing, present
+                                } else {
+                                    // mark as absent
+                                    Log.i("INFO", "Missing student: " + document.getId());
+                                    DocumentReference absentStudentRef = document.getReference();
+                                    // Check if the DocumentReference is not null before proceeding
+                                    if (absentStudentRef != null) {
+                                        // Update the "days_missed" array field
+                                        absentStudentRef.update("days_missed", FieldValue.arrayUnion(new Timestamp(Calendar.getInstance().getTime())));
+                                        Log.i("INFO", "Updated days_missed for " + document.getId());
+                                    } else {
+                                        Log.e("ERROR", "DocumentReference is null for " + document.getId());
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Handle errors
+                        Log.i("INFO", "markMissingStudentsAbsent: task was not successful");
+                    }
+                });
+    }
+
+    // Method to check if the current date is in "days_attended" array
+    private boolean isDateInDaysAttended(QueryDocumentSnapshot document) {
+        if (document.contains("days_attended")) {
+            // Get the "days_attended" array
+            Object daysAttendedObject = document.get("days_attended");
+            List<Object> attendTimestampList = (List<Object>) daysAttendedObject;
+            Date currentDate = Calendar.getInstance().getTime();
+            List<String> formattedAttendDates = new ArrayList<>();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            String formattedCurrentDate = dateFormat.format(currentDate);
+
+            for (Object timestamp : attendTimestampList) {
+                if (timestamp instanceof com.google.firebase.Timestamp) {
+                    com.google.firebase.Timestamp firebaseTimestamp = (com.google.firebase.Timestamp) timestamp;
+                    Date date = firebaseTimestamp.toDate();
+                    String formattedDate = dateFormat.format(date);
+                    formattedAttendDates.add(formattedDate);
+                    // Format 'date' as needed or perform actions
+                    Log.d("Timestamp", "Date: " + date);
+                }
+            }
+
+            return formattedAttendDates.contains(formattedCurrentDate);
+        }
+        return false;
+    }
+
+    // Helper method to convert a List of Timestamps to a List of Dates
+    private List<Date> convertTimestampsToDateList(List<?> timestamps) {
+        List<Date> dateList = new ArrayList<>();
+        for (Object timestampObject : timestamps) {
+            if (timestampObject instanceof Timestamp) {
+                Timestamp timestamp = (Timestamp) timestampObject;
+                dateList.add(timestamp.toDate());
+            }
+        }
+        return dateList;
     }
 
     private void initializeUIComponents() {
@@ -163,6 +294,9 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                                 classListAll.add(course);
                                 if (course.isCourseScheduledToday()) {
                                     classList.add(course);
+                                    if (course.isClassHappeningNow()) {
+                                        checkIfAttendanceHasAlreadyBeenOpened(course);
+                                    }
                                 }
                             }
                             adapter.notifyDataSetChanged();
@@ -403,15 +537,21 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     @Override
     public void onCourseClick(Course course) {
-        if (!locationObtained) {
-            listenForLocation(course);
-        } else {
-            showCloseAttendanceDialog(course);
+        Log.i("INFO", "onCourseClick: locationObtained: " + locationObtained);
+        checkIfAttendanceHasAlreadyBeenOpened(course);
+        try {
+            if (!locationObtained) {
+                listenForLocation(course);
+            } else {
+                showCloseAttendanceDialog(course);
+            }
+        } catch (Exception e){
+            Toast.makeText(ProfessorHomePage.this, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-
     }
 
     private void listenForLocation(Course course) {
+        Log.i("INFO", "listenForLocation");
         if (!locationObtained) {
             if (Build.VERSION.SDK_INT < 23) {
                 startListening();
@@ -433,6 +573,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     private void updateProfLocationInFireBase(Course course, Location location)
     {
+        Log.i("INFO", "UpdateProfLocationinFireBase location: " + location);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         CollectionReference classesRef = db.collection("Classes");
         classesRef.whereEqualTo("course_name", course.getCourseName())
@@ -503,43 +644,13 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
     }
 
     private void updateLocationInfo(Location location) {
-        Log.i("LocationInfo", location.toString());
+        Log.i("updateLocationInfo", location.toString());
 
-        String latitude = String.valueOf(location.getLatitude());
-        String longitude = String.valueOf(location.getLongitude());
-        String accuracy = String.valueOf(location.getAccuracy());
-        Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
-
-        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-
-        try {
-            String address = "Could not find address";
-            List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-
-            if (listAddresses != null && listAddresses.size() > 0){
-                Log.i("PlaceInfo", listAddresses.get(0).toString());
-                address = "Address: \n";
-                if (listAddresses.get(0).getSubThoroughfare() != null) {
-                    address += listAddresses.get(0).getSubThoroughfare() + " ";
-                }
-                if (listAddresses.get(0).getThoroughfare() != null) {
-                    address += listAddresses.get(0).getThoroughfare() + " ";
-                }
-                if (listAddresses.get(0).getLocality() != null) {
-                    address += listAddresses.get(0).getLocality() + " ";
-                }
-                if (listAddresses.get(0).getPostalCode() != null) {
-                    address += listAddresses.get(0).getPostalCode() + " ";
-                }
-                if (listAddresses.get(0).getCountryName() != null) {
-                    address += listAddresses.get(0).getCountryName() + " ";
-                }
-            }
-
-            // TextView addressTextView = (TextView) findViewById(R.id.addressTextView);
-            Log.i("INFO", "Address: " + address);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (location != null){
+            String latitude = String.valueOf(location.getLatitude());
+            String longitude = String.valueOf(location.getLongitude());
+            String accuracy = String.valueOf(location.getAccuracy());
+            Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
         }
     }
 
@@ -556,8 +667,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        // Handle "No" button click
-                        // Do nothing or add any specific behavior
+                        // Do nothing, attendance is still open
                     }
                 })
                 .show();
@@ -570,6 +680,11 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
         loc.setLongitude(0.0);
 
         updateProfLocationInFireBase(course, loc);
+        /*
+         * Mark students who didn't attend today absent (nested queries that build on each other)
+         * queryForCurrentCourse(course) calls a method that marks missing students as absent
+         */
+        queryForCurrentCourse(course);
         locationObtained = false;
     }
 }

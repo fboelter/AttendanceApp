@@ -42,6 +42,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -127,6 +128,113 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                         }
                     }
                 });
+    }
+
+    private void queryForCurrentCourse(Course course) {
+        Log.i("INFO", "Prof view queryForCurrentCourse");
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            String userEmail = currentUser.getEmail();
+            // Reference to the "Classes" collection
+            CollectionReference classesRef = db.collection("Classes");
+            classesRef.whereEqualTo("course_name", course.getCourseName())
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot classDocument : task.getResult()) {
+                                // For each matching document, check if userEmail is in "Students" collection
+                                markMissingStudentsAbsentInFirebase(classDocument.getReference());
+                            }
+                        }  else {
+                            Toast.makeText(ProfessorHomePage.this, "Something went wrong when looking for current class in queryForCurrentCourse", Toast.LENGTH_LONG);
+                        }
+
+                    });
+            // Task never completed
+        }
+        else {
+            Toast.makeText(ProfessorHomePage.this, "Authentication error in queryForCurrentCourse: currentUser is null", Toast.LENGTH_LONG);
+        }
+    }
+
+    // Method to query documents where the current date is not in "days_attended"
+    private void markMissingStudentsAbsentInFirebase(final DocumentReference classDocRef) {
+        Log.i("INFO", "markMissingStudentsAbsentInFirebase");
+        CollectionReference studentsRef = classDocRef.collection("Students");
+
+        // Query to get documents where the current date is in "days_attended"
+        studentsRef.get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        QuerySnapshot allDocumentsQuerySnapshot = task.getResult();
+                        if (allDocumentsQuerySnapshot != null && !allDocumentsQuerySnapshot.isEmpty()) {
+                            // Iterate through all documents
+                            for (QueryDocumentSnapshot document : allDocumentsQuerySnapshot) {
+
+                                // Check if the current date is in "days_attended" array
+                                Log.i("INFO", "isDateInDaysAttended for " + document.getId() + ": " + isDateInDaysAttended(document));
+                                if (isDateInDaysAttended(document)) {
+                                    // do nothing, present
+                                } else {
+                                    // mark as absent
+                                    Log.i("INFO", "Missing student: " + document.getId());
+                                    DocumentReference absentStudentRef = document.getReference();
+                                    // Check if the DocumentReference is not null before proceeding
+                                    if (absentStudentRef != null) {
+                                        // Update the "days_missed" array field
+                                        absentStudentRef.update("days_missed", FieldValue.arrayUnion(new Timestamp(Calendar.getInstance().getTime())));
+                                        Log.i("INFO", "Updated days_missed for " + document.getId());
+                                    } else {
+                                        Log.e("ERROR", "DocumentReference is null for " + document.getId());
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Handle errors
+                        Log.i("INFO", "markMissingStudentsAbsent: task was not successful");
+                    }
+                });
+    }
+
+    // Method to check if the current date is in "days_attended" array
+    private boolean isDateInDaysAttended(QueryDocumentSnapshot document) {
+        if (document.contains("days_attended")) {
+            // Get the "days_attended" array
+            Object daysAttendedObject = document.get("days_attended");
+            List<Object> attendTimestampList = (List<Object>) daysAttendedObject;
+            Date currentDate = Calendar.getInstance().getTime();
+            List<String> formattedAttendDates = new ArrayList<>();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            String formattedCurrentDate = dateFormat.format(currentDate);
+
+            for (Object timestamp : attendTimestampList) {
+                if (timestamp instanceof com.google.firebase.Timestamp) {
+                    com.google.firebase.Timestamp firebaseTimestamp = (com.google.firebase.Timestamp) timestamp;
+                    Date date = firebaseTimestamp.toDate();
+                    String formattedDate = dateFormat.format(date);
+                    formattedAttendDates.add(formattedDate);
+                    // Format 'date' as needed or perform actions
+                    Log.d("Timestamp", "Date: " + date);
+                }
+            }
+
+            return formattedAttendDates.contains(formattedCurrentDate);
+        }
+        return false;
+    }
+
+    // Helper method to convert a List of Timestamps to a List of Dates
+    private List<Date> convertTimestampsToDateList(List<?> timestamps) {
+        List<Date> dateList = new ArrayList<>();
+        for (Object timestampObject : timestamps) {
+            if (timestampObject instanceof Timestamp) {
+                Timestamp timestamp = (Timestamp) timestampObject;
+                dateList.add(timestamp.toDate());
+            }
+        }
+        return dateList;
     }
 
     private void initializeUIComponents() {
@@ -572,6 +680,11 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
         loc.setLongitude(0.0);
 
         updateProfLocationInFireBase(course, loc);
+        /*
+         * Mark students who didn't attend today absent (nested queries that build on each other)
+         * queryForCurrentCourse(course) calls a method that marks missing students as absent
+         */
+        queryForCurrentCourse(course);
         locationObtained = false;
     }
 }

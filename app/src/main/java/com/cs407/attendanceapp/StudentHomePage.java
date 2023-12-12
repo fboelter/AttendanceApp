@@ -67,7 +67,6 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
     TODO:
     - double check the location checking logic (ensure that location is only taken once when location is requested,
         if requested a second time, take location again
-    - implement keeping the professor button a checkmark if attendance is open by checking whether prof_location coordinates are non-zero
     - test the reverse of attendance (prof on phone, student on computer)
     = test ranges
     - if a student doesn't attend after class ends, mark them as absent

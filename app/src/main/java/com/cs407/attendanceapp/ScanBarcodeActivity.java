@@ -99,7 +99,7 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
 
         } else {
             // Camera permission denied. You may want to show a message or take alternative actions.
-            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+            Toast.makeText(ScanBarcodeActivity.this, "Camera permission denied", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -149,7 +149,7 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
                     // Handle exceptions, e.g., show an error message to the user
                     Log.e(TAG, "Error initializing camera provider: " + e.getMessage(), e);
                     // Optionally, show an error message to the user
-                    runOnUiThread(() -> Toast.makeText(this, "Error initializing camera", Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> Toast.makeText(ScanBarcodeActivity.this, "Error initializing camera", Toast.LENGTH_SHORT).show());
                 }
             }, ContextCompat.getMainExecutor(this));
         }

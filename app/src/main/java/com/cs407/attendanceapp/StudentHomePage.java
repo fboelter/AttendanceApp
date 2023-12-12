@@ -31,6 +31,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -303,9 +304,10 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
                                 classList.add(newCourse);
                                 adapter.notifyDataSetChanged();
                             }
+                            Toast.makeText(StudentHomePage.this, "Class successfully added", Toast.LENGTH_SHORT).show();
                         } else {
                             // Document does not exist
-                            Log.d("Firestore", "Document with ID " + classId + " does not exist.");
+                            Toast.makeText(StudentHomePage.this, "Document with ID " + classId + " does not exist.", Toast.LENGTH_LONG).show();
                         }
                     }
                 })
@@ -313,6 +315,7 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
                     @Override
                     public void onFailure(@NonNull Exception e) {
                         // Handle errors
+                        Toast.makeText(StudentHomePage.this, "Error getting document: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         Log.e("Firestore", "Error getting document: " + e.getMessage());
                     }
                 });
@@ -326,28 +329,45 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
         CollectionReference classesRef = db.collection("Classes");
         CollectionReference studentsRef = classesRef.document(classId).collection("Students");
 
-        Map<String, Object> newData = new HashMap<>();
-        newData.put("days_attended", Arrays.asList());
-        newData.put("days_missed", Arrays.asList());
-        newData.put("grade", 0);
+        // Check that course exists
+        DocumentReference classDocumentRef = classesRef.document(classId);
+        classDocumentRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+                        Map<String, Object> newData = new HashMap<>();
+                        newData.put("days_attended", Arrays.asList());
+                        newData.put("days_missed", Arrays.asList());
+                        newData.put("grade", 0);
 
-        studentsRef.document(studentEmail).set(newData, SetOptions.merge())
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void unused) {
-                        Log.i("Info", "Student document set in Firebase successfully");
-                        addCourseToStudentCourses(classId);
+                        studentsRef.document(studentEmail).set(newData, SetOptions.merge())
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void unused) {
+                                        Log.i("Info", "Student document set in Firebase successfully");
+                                        addCourseToStudentCourses(classId);
 
-                        // if they both succeed, send Toast
-                        Toast.makeText(getApplicationContext(), "Course added successfully", Toast.LENGTH_SHORT);
+                                        // if they both succeed, send Toast
+                                        Toast.makeText(StudentHomePage.this, "Course added successfully", Toast.LENGTH_SHORT).show();
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        Log.e("Firebase", "Student document failed to update");
+                                        Toast.makeText(StudentHomePage.this, "Student was not added to class. Try again.", Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                    } else {
+                        Toast.makeText(StudentHomePage.this, "Course does not exist. Try again.", Toast.LENGTH_LONG).show();
                     }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e("Firebase", "Student document failed to update");
-                    }
-                });
+                } else {
+                    Toast.makeText(StudentHomePage.this, "Error occurred while fetching the class. Try again.", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
     }
 
         @Override
@@ -505,7 +525,7 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
                                             Log.d("Firestore", "Days attended updated successfully");
                                             markedPresent = true;
                                             adapter.changeAttendanceButtonToCheckMark(course);
-                                            Toast.makeText(getApplicationContext(), "You have been marked as present", Toast.LENGTH_LONG);
+                                            Toast.makeText(StudentHome.this, "You have been marked as present", Toast.LENGTH_LONG);
                                         } else {
                                             // Handle errors
                                             Exception exception = task.getException();
@@ -545,7 +565,7 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
             String accuracy = String.valueOf(location.getAccuracy());
             Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
 
-            Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+            Geocoder geocoder = new Geocoder(StudentHome.this, Locale.getDefault());
 
             try {
                 String address = "Could not find address";

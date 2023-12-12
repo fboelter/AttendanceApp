@@ -2,7 +2,6 @@ package com.cs407.attendanceapp;
 
 import android.Manifest.permission;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
@@ -18,6 +17,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.view.PreviewView;
 
 import com.cs407.attendanceapp.CourseAdapter.OnCourseClickListener;
 import com.cs407.attendanceapp2.R;
@@ -58,6 +59,12 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
     public static final String[] REQUIRED_PERMISSIONS = {permission.CAMERA};
     public static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private static final int ACCESS_FINE_LOCATION_REQUEST_CODE = 101;
+    private PreviewView previewView;
+    private ImageCapture imageCapture;
+    private ImageView imageView;
+    private ExecutorService cameraExecutor;
+    private BarcodeScanner barcodeScanner;
+    private String barcodeValue;
 
     // LocationManager locationManager;
     // LocationListener locationListener;
@@ -75,6 +82,17 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
         setupListViewItemClickListener();
         fetchAndDisplayCourses();
         FirebaseApp.initializeApp(this);
+
+        // Retrieve extra values from the Intent
+        barcodeValue = getIntent().getStringExtra("barcodeValue");
+
+        // Use the received value as needed
+        if (barcodeValue != null) {
+            // Task completed successfully
+            String classId = barcodeValue;
+            Log.i("INFO", "Class Id is: " + classId);
+            addStudentToFirebaseCourse(classId);
+        }
 
         /*
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
@@ -125,7 +143,7 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
     private void setupAddCourseButtonListener() {
         addCourseStudentButton.setOnClickListener(v -> {
             Log.i("INFO", "Add course button clicked");
-            requestCameraPermission();
+            navigateToCameraPreview();
         });
     }
 
@@ -232,44 +250,12 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
         return timestamp.toDate();
     }
 
-    private void requestCameraPermission() {
-        Log.i("INFO", "Requesting camera permission");
-        // Check if the CAMERA permission has been granted
-        if (ContextCompat.checkSelfPermission(this, permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED) {
-            Log.i("INFO", "Permission granted. Starting camera");
-            // Camera permission is already granted, proceed with camera-related operations
-            scanBarcode();
-        } else {
-            // Request CAMERA permission. The result will be received in the onRequestPermissionsResult callback.
-            Log.i("INFO", "Requesting permission");
-            ActivityCompat.requestPermissions(
-                    this,
-                    REQUIRED_PERMISSIONS,
-                    CAMERA_PERMISSION_REQUEST_CODE
-            );
-        }
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-            handleCameraPermissionResult(grantResults);
-        } else if (requestCode == ACCESS_FINE_LOCATION_REQUEST_CODE) {
+        if (requestCode == ACCESS_FINE_LOCATION_REQUEST_CODE) {
             // handleLocationPermissionResult(grantResults);
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        }
-    }
-
-    private void handleCameraPermissionResult(int[] grantResults) {
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            // Camera permission granted, proceed with camera-related operations
-            Log.i("INFO", "Camera permission granted, starting camera");
-            scanBarcode(); // Replace with your camera-related operation
-        } else {
-            // Camera permission denied. You may want to show a message or take alternative actions.
-            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -310,9 +296,10 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
                             // Add course to student's course list
                             Log.i("INFO", "Adding course: " + classId + " , " + courseName + ", " + timeRange);
                             Course newCourse = new Course(courseName, timeRange, classId, daysOfWeek, startDate, endDate);
-                            classListAll.add(newCourse);
-                            adapter_all.notifyDataSetChanged();
-                            if (newCourse.isCourseScheduledToday()) {
+                            if (!classListAll.contains(newCourse)){
+                                classListAll.add(newCourse);
+                                adapter_all.notifyDataSetChanged();
+                            } else if (newCourse.isCourseScheduledToday() && !classList.contains(newCourse)) {
                                 classList.add(newCourse);
                                 adapter.notifyDataSetChanged();
                             }
@@ -349,6 +336,10 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
                     @Override
                     public void onSuccess(Void unused) {
                         Log.i("Info", "Student document set in Firebase successfully");
+                        addCourseToStudentCourses(classId);
+
+                        // if they both succeed, send Toast
+                        Toast.makeText(getApplicationContext(), "Course added successfully", Toast.LENGTH_SHORT);
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
@@ -358,59 +349,6 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
                     }
                 });
     }
-
-    private void scanBarcode() {
-        navigateToCameraPreview();
-        /*
-        ImageView barCodeImage;
-        BitmapDrawable drawable = (BitmapDrawable) barCodeImage.getDrawable();
-        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
-                .setBarcodeFormats(
-                        Barcode.FORMAT_QR_CODE,
-                        Barcode.FORMAT_AZTEC)
-                .build();
-        Log.i("INFO", "Barcode options set");
-        BarcodeScanner scanner = BarcodeScanning.getClient(options);
-
-        Bitmap bitmap = drawable.getBitmap();
-        InputImage image = InputImage.fromBitmap(bitmap, 90); // 90 for portrait images
-
-        // Perform the actual barcode scanning
-        scanner.process(image)
-                .addOnSuccessListener(new OnSuccessListener<List<Barcode>>() {
-                    @Override
-                    public void onSuccess(List<Barcode> barcodes) {
-                        // Process the detected barcodes
-                        for (Barcode barcode : barcodes) {
-                            // Access barcode information
-                            String value = barcode.getDisplayValue();
-                            int format = barcode.getFormat();
-                            // Handle the barcode data as needed
-                            // For example, display the barcode value in a TextView
-                            Log.i("INFO","Barcode Value: " + value);
-                        }
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        // Handle barcode scanning failure
-                        Log.e("BarcodeScanning", "Barcode scanning failed: " + e.getMessage());
-                    }
-                });
-
-            // Task completed successfully
-            // String rawValue = barcode.getRawValue();
-            // String classId = rawValue.toString();
-            // Log.i("INFO", "Class Id is: " + classId);
-            // addStudentToFirebaseCourse(classId);
-            // addCourseToStudentCourses(classId);
-
-            // if they both succeed, send Toast
-            // Toast.makeText(getApplicationContext(), "Course added successfully", Toast.LENGTH_SHORT);
-         */
-
-        }
 
         @Override
         public void onCourseClick (Course course){

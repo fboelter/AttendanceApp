@@ -3,6 +3,7 @@ package com.cs407.attendanceapp;
 import static com.cs407.attendanceapp.StudentHomePage.REQUIRED_PERMISSIONS;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -49,6 +50,7 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
     private ImageCapture imageCapture;
     // Initialize cameraExecutor
     private final ExecutorService cameraExecutor = Executors.newSingleThreadExecutor();
+    ProcessCameraProvider cameraProvider;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -106,7 +108,7 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
 
             cameraProviderFuture.addListener(() -> {
                 try {
-                    ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                    cameraProvider = cameraProviderFuture.get();
 
                     // Preview
                     Preview preview = new Preview.Builder().build();
@@ -154,7 +156,23 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
 
     @Override
     public void onBarcodeScanned(String rawValue) {
-        Toast.makeText(getApplicationContext(), "ON BARCODE SCANNED", Toast.LENGTH_SHORT);
+        Log.i("INFO", "onBarcodeScanned");
+        navigateToStudentHomeScreen(rawValue);
+    }
+
+    private void navigateToStudentHomeScreen(String rawValue) {
+        // Stop the camera preview and navigate to another screen
+
+        if (cameraProvider != null) {
+            cameraProvider.unbindAll();
+        }
+
+        Intent intent = new Intent(this, StudentHomePage.class);
+        intent.putExtra("barcodeValue", rawValue);
+        startActivity(intent);
+
+        // Finish the current activity
+        finish();
     }
 
     class ThisAnalyzer implements ImageAnalysis.Analyzer {
@@ -193,7 +211,6 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
                                     // Handle QR code
                                     Log.i("INFO", "Value: " + rawValue);
                                     barcodeListener.onBarcodeScanned(rawValue);
-
                                 }
                             }
                         })

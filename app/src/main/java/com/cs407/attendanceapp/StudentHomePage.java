@@ -599,7 +599,6 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
     */
 
     private void navigateToCameraPreview() {
-        // Create an Intent to start the CameraPreviewActivity
         Intent intent = new Intent(this, ScanBarcodeActivity.class);
         startActivity(intent);
     }

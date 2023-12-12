@@ -54,4 +54,5 @@
     <string name="textview">TextView</string>
     <string name="days_attended">Days Attended:</string>
     <string name="days_missed">Days Missed</string>
+    <string name="no_grades_to_show_class_has_not_started_yet">No grades to show. Class has not started yet</string>
 </resources>

@@ -7,8 +7,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -49,7 +47,6 @@ import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -403,15 +400,20 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     @Override
     public void onCourseClick(Course course) {
-        if (!locationObtained) {
-            listenForLocation(course);
-        } else {
-            showCloseAttendanceDialog(course);
+        Log.i("INFO", "onCourseClick: locationObtained: " + locationObtained);
+        try {
+            if (!locationObtained) {
+                listenForLocation(course);
+            } else {
+                showCloseAttendanceDialog(course);
+            }
+        } catch (Exception e){
+            Toast.makeText(ProfessorHomePage.this, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-
     }
 
     private void listenForLocation(Course course) {
+        Log.i("INFO", "listenForLocation");
         if (!locationObtained) {
             if (Build.VERSION.SDK_INT < 23) {
                 startListening();
@@ -433,6 +435,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     private void updateProfLocationInFireBase(Course course, Location location)
     {
+        Log.i("INFO", "UpdateProfLocationinFireBase location: " + location);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         CollectionReference classesRef = db.collection("Classes");
         classesRef.whereEqualTo("course_name", course.getCourseName())
@@ -503,43 +506,13 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
     }
 
     private void updateLocationInfo(Location location) {
-        Log.i("LocationInfo", location.toString());
+        Log.i("updateLocationInfo", location.toString());
 
-        String latitude = String.valueOf(location.getLatitude());
-        String longitude = String.valueOf(location.getLongitude());
-        String accuracy = String.valueOf(location.getAccuracy());
-        Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
-
-        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-
-        try {
-            String address = "Could not find address";
-            List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-
-            if (listAddresses != null && listAddresses.size() > 0){
-                Log.i("PlaceInfo", listAddresses.get(0).toString());
-                address = "Address: \n";
-                if (listAddresses.get(0).getSubThoroughfare() != null) {
-                    address += listAddresses.get(0).getSubThoroughfare() + " ";
-                }
-                if (listAddresses.get(0).getThoroughfare() != null) {
-                    address += listAddresses.get(0).getThoroughfare() + " ";
-                }
-                if (listAddresses.get(0).getLocality() != null) {
-                    address += listAddresses.get(0).getLocality() + " ";
-                }
-                if (listAddresses.get(0).getPostalCode() != null) {
-                    address += listAddresses.get(0).getPostalCode() + " ";
-                }
-                if (listAddresses.get(0).getCountryName() != null) {
-                    address += listAddresses.get(0).getCountryName() + " ";
-                }
-            }
-
-            // TextView addressTextView = (TextView) findViewById(R.id.addressTextView);
-            Log.i("INFO", "Address: " + address);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (location != null){
+            String latitude = String.valueOf(location.getLatitude());
+            String longitude = String.valueOf(location.getLongitude());
+            String accuracy = String.valueOf(location.getAccuracy());
+            Log.i("INFO", "Lat: " + latitude + "\tLong: " + longitude + "\t Accuracy: " + accuracy);
         }
     }
 
@@ -556,8 +529,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        // Handle "No" button click
-                        // Do nothing or add any specific behavior
+                        // Do nothing, attendance is still open
                     }
                 })
                 .show();

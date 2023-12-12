@@ -1,12 +1,8 @@
 package com.cs407.attendanceapp;
 
-import static com.cs407.attendanceapp.StudentHomePage.REQUIRED_PERMISSIONS;
-
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Point;
-import android.graphics.Rect;
 import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
@@ -68,11 +64,7 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
         } else {
             // Request CAMERA permission. The result will be received in the onRequestPermissionsResult callback.
             Log.i("INFO", "Requesting permission");
-            ActivityCompat.requestPermissions(
-                    this,
-                    REQUIRED_PERMISSIONS,
-                    CAMERA_PERMISSION_REQUEST_CODE
-            );
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
         }
     }
 
@@ -87,10 +79,12 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
 
     private void handleCameraPermissionResult(int[] grantResults) {
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // Camera permission granted, proceed with camera-related operations
             Log.i("INFO", "Camera permission granted, starting camera");
 
         } else {
-            Toast.makeText(ScanBarcodeActivity.this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+            // Camera permission denied. You may want to show a message or take alternative actions.
+            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -131,11 +125,13 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
                     cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, imageAnalysis);
 
                 } catch (ExecutionException | InterruptedException e) {
-                    Log.e("INFO", "Error initializing camera provider: " + e.getMessage(), e);
-                    runOnUiThread(() -> Toast.makeText(ScanBarcodeActivity.this, "Error initializing camera", Toast.LENGTH_SHORT).show());
+                    // Handle exceptions, e.g., show an error message to the user
+                    Log.e("ERROR", "Error initializing camera provider: " + e.getMessage(), e);
+                    // Optionally, show an error message to the user
+                    runOnUiThread(() -> Toast.makeText(this, "Error initializing camera", Toast.LENGTH_SHORT).show());
                 }
             }, ContextCompat.getMainExecutor(this));
-    }
+        }
 
     @Override
     public void onBarcodeScanned(String rawValue) {
@@ -158,7 +154,7 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
         finish();
     }
 
-    class ThisAnalyzer implements ImageAnalysis.Analyzer {
+    static class ThisAnalyzer implements ImageAnalysis.Analyzer {
 
         private final BarcodeScanner scanner;
         private final BarcodeListener barcodeListener;
@@ -184,8 +180,6 @@ public class ScanBarcodeActivity extends AppCompatActivity implements BarcodeLis
                         .addOnSuccessListener(barcodes -> {
                             // Task completed successfully
                             for (Barcode barcode : barcodes) {
-                                Rect bounds = barcode.getBoundingBox();
-                                Point[] corners = barcode.getCornerPoints();
 
                                 String rawValue = barcode.getRawValue();
 

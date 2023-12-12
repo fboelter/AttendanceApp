@@ -103,6 +103,32 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
 
     }
 
+    private void checkIfAttendanceHasAlreadyBeenOpened(Course course) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference classesRef = db.collection("Classes");
+        classesRef.whereEqualTo("course_name", course.getCourseName())
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            // Access the GeoPoint from the Firestore document
+                            GeoPoint geoPoint = document.getGeoPoint("prof_location");
+
+                            if (geoPoint != null) {
+                                // Extract latitude and longitude
+                                double latitude = geoPoint.getLatitude();
+                                double longitude = geoPoint.getLongitude();
+                                if ((latitude != 0) && (longitude !=0))
+                                {
+                                    adapter.changeAttendanceButtonToCheckMark(course);
+                                    locationObtained = true;
+                                }
+                            }
+                        }
+                    }
+                });
+    }
+
     private void initializeUIComponents() {
         ImageView profileIcon = findViewById(R.id.profile_icon);
         profileIcon.setOnClickListener(this::showProfilePopupMenu);
@@ -160,6 +186,9 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
                                 classListAll.add(course);
                                 if (course.isCourseScheduledToday()) {
                                     classList.add(course);
+                                    if (course.isClassHappeningNow()) {
+                                        checkIfAttendanceHasAlreadyBeenOpened(course);
+                                    }
                                 }
                             }
                             adapter.notifyDataSetChanged();
@@ -401,6 +430,7 @@ public class ProfessorHomePage extends AppCompatActivity implements CourseAdapte
     @Override
     public void onCourseClick(Course course) {
         Log.i("INFO", "onCourseClick: locationObtained: " + locationObtained);
+        checkIfAttendanceHasAlreadyBeenOpened(course);
         try {
             if (!locationObtained) {
                 listenForLocation(course);

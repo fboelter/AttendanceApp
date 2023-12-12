@@ -65,14 +65,11 @@ public class StudentHomePage extends AppCompatActivity implements OnCourseClickL
     boolean locationObtained = false; // TODO: update setting of locationObtained and markedPresent so that you don't have to retake attendance when you sign out
     /*
     TODO:
-    - Invalid null listener - check if listener is initialized or closed prematurely
     - double check the location checking logic (ensure that location is only taken once when location is requested,
         if requested a second time, take location again
     - implement keeping the professor button a checkmark if attendance is open by checking whether prof_location coordinates are non-zero
     - test the reverse of attendance (prof on phone, student on computer)
     = test ranges
-    - can we make the emulator location the current location?
-    - do as much as you can to break it before noon
     - if a student doesn't attend after class ends, mark them as absent
      */
     @Override
